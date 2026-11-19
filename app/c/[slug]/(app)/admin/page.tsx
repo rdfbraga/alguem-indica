@@ -2,7 +2,7 @@ import Link from "next/link";
 import { requireAdmin } from "@/lib/condo";
 import type { Category, CategoryGroup, ProviderRow, ReviewRow } from "@/lib/types";
 import { groupCategories } from "@/lib/groups";
-import { capitalizeFirst, groupSuggestions } from "@/lib/suggestions";
+import { capitalizeFirst, findSimilarCategories, groupSuggestions } from "@/lib/suggestions";
 import {
   adminClearFlag,
   adminCreateCategory,
@@ -40,7 +40,8 @@ export default async function Admin({ params }: { params: Promise<{ slug: string
   ]);
   const groups = (groupData ?? []) as CategoryGroup[];
   const suggestions = groupSuggestions((pendingData ?? []) as { id: string; name: string; custom_category: string | null }[]);
-  const moveSections = groupCategories(groups, ((catData ?? []) as Category[]).filter((c) => c.slug !== "outros"));
+  const allCategories = ((catData ?? []) as Category[]).filter((c) => c.slug !== "outros");
+  const moveSections = groupCategories(groups, allCategories);
   const reports = (reportsData ?? []) as Report[];
   const provIds = reports.map((r) => r.provider_id).filter(Boolean) as string[];
   const revIds = reports.map((r) => r.review_id).filter(Boolean) as string[];
@@ -60,8 +61,21 @@ export default async function Admin({ params }: { params: Promise<{ slug: string
 
       <section className="space-y-3">
         <h2 className="font-semibold">🏷️ Categorias sugeridas ({suggestions.length})</h2>
+        <details className="card !rounded-2xl !p-3 text-sm">
+          <summary className="cursor-pointer font-bold text-sky-brand">📚 Ver todas as categorias existentes ({allCategories.length})</summary>
+          <div className="mt-3 space-y-3">
+            {moveSections.map((sec) => (
+              <div key={sec.group.id}>
+                <div className="font-extrabold">{sec.group.icon} {sec.group.name}</div>
+                <p className="text-navy/70">{sec.categories.map((c) => `${c.icon} ${c.name}`).join(" · ")}</p>
+              </div>
+            ))}
+          </div>
+        </details>
         {suggestions.map((g) => {
           const ids = g.items.map((i) => i.id).join(",");
+          const similar = findSimilarCategories(g.label, allCategories);
+          const groupName = (gid: number | null) => groups.find((x) => x.id === gid)?.name;
           return (
             <div key={g.key} className="card space-y-3">
               <div>
@@ -73,6 +87,25 @@ export default async function Admin({ params }: { params: Promise<{ slug: string
                   ))}
                 </p>
               </div>
+              {similar.length > 0 ? (
+                <div className="rounded-2xl bg-amber-50 p-3">
+                  <p className="text-sm font-bold text-amber-800">🔎 Já existe algo parecido. Talvez não precise criar:</p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {similar.map((c) => (
+                      <form key={c.id} action={adminMoveToCategory.bind(null, slug)}>
+                        <input type="hidden" name="ids" value={ids} />
+                        <input type="hidden" name="category_id" value={c.id} />
+                        <button className="rounded-full border-2 border-amber-300 bg-white px-3 py-1 text-sm font-bold hover:bg-amber-100" title="Mover estes prestadores para esta categoria">
+                          {c.icon} {c.name}{groupName(c.group_id) ? <span className="font-normal text-navy/50"> · {groupName(c.group_id)}</span> : null}
+                          <span className="ml-1 text-brand-700">→ mover</span>
+                        </button>
+                      </form>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <p className="rounded-2xl bg-green-50 p-3 text-sm font-semibold text-green-700">✅ Nenhuma categoria parecida encontrada. Pode criar.</p>
+              )}
               <form action={adminCreateCategory.bind(null, slug)} className="flex flex-wrap items-end gap-2">
                 <input type="hidden" name="ids" value={ids} />
                 <div className="w-16">
