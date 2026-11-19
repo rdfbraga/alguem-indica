@@ -27,18 +27,17 @@
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td align="center" style="padding-bottom:24px;">
-                    <a href="{{ .ConfirmationURL }}" style="display:inline-block;background-color:#D4510A;color:#FFFFFF;text-decoration:none;font-weight:700;font-size:17px;padding:14px 32px;border-radius:14px;">Entrar no Alguém indica?</a>
+                    <a href="{{ .RedirectTo }}&token_hash={{ .TokenHash }}&type=email" style="display:inline-block;background-color:#D4510A;color:#FFFFFF;text-decoration:none;font-weight:700;font-size:17px;padding:14px 32px;border-radius:14px;">Entrar no Alguém indica?</a>
                   </td>
                 </tr>
               </table>
-              <p style="margin:0 0 8px 0;font-size:14px;line-height:1.5;color:#12304F;">💡 <b>Dica:</b> abra o link <b>neste mesmo aparelho e navegador</b> em que você pediu o acesso.</p>
               <p style="margin:0;font-size:14px;line-height:1.5;color:#4A6580;">⏱️ Por segurança, o link vale por <b>1 hora</b> e só funciona <b>uma vez</b>.</p>
             </td>
           </tr>
           <tr>
             <td style="padding:20px 8px 0 8px;font-size:12px;line-height:1.6;color:#6B7F94;text-align:center;">
               Se o botão não funcionar, copie e cole este endereço no navegador:<br>
-              <a href="{{ .ConfirmationURL }}" style="color:#337DB6;word-break:break-all;">{{ .ConfirmationURL }}</a>
+              <a href="{{ .RedirectTo }}&token_hash={{ .TokenHash }}&type=email" style="color:#337DB6;word-break:break-all;">{{ .RedirectTo }}&token_hash={{ .TokenHash }}&type=email</a>
               <br><br>
               Não foi você? É só ignorar este e-mail, nada será alterado.<br>
               Alguém indica? · <a href="{{ .SiteURL }}" style="color:#337DB6;">alguemindica.app.br</a>

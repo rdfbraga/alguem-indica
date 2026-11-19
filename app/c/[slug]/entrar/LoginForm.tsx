@@ -23,14 +23,17 @@ export function LoginForm({ slug }: { slug: string }) {
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [message, setMessage] = useState("");
 
+  // Google: volta pelo callback (OAuth). Link de e-mail: abre uma tela própria (/auth/confirm),
+  // com o link no domínio do app (melhora a entrega) e conclusão só no clique do botão.
   const redirectTo = () => `${window.location.origin}/auth/callback?next=${encodeURIComponent(`/c/${slug}`)}`;
+  const emailRedirectTo = () => `${window.location.origin}/auth/confirm?next=${encodeURIComponent(`/c/${slug}`)}`;
 
   async function sendLink(e: React.FormEvent) {
     e.preventDefault();
     setStatus("sending");
     const { error } = await createClient().auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: redirectTo() },
+      options: { emailRedirectTo: emailRedirectTo() },
     });
     if (error) {
       console.error("signInWithOtp", error);
@@ -56,7 +59,7 @@ export function LoginForm({ slug }: { slug: string }) {
         <div className="text-4xl">📬</div>
         <p className="mt-2 font-semibold">Confira seu e-mail</p>
         <p className="mt-1 text-sm text-navy/70">
-          Enviamos um link para <b>{email}</b>. Abra-o <b>neste mesmo aparelho</b> para entrar.
+          Enviamos um link para <b>{email}</b>. É só tocar nele para entrar. Se não encontrar, olhe também o spam.
         </p>
       </div>
     );

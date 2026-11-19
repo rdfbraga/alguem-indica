@@ -22,7 +22,7 @@ export default async function Entrar({
           🏠 {condo.name}
         </p>
       </header>
-      {erro && <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700">O link expirou ou foi aberto em outro aparelho. Peça um novo.</p>}
+      {erro && <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700">O link expirou ou já foi usado. Peça um novo.</p>}
       <LoginForm slug={slug} />
       <p className="text-center text-xs text-navy/50">
         Ao continuar você concorda com os <a href="/termos" className="underline">Termos</a> e a{" "}
