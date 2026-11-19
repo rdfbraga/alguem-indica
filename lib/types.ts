@@ -21,6 +21,8 @@ export type ProviderRow = {
   custom_category: string | null;
   custom_category_reviewed: boolean;
   created_by?: string;
+  owner_id?: string | null;
+  owner_since?: string | null;
   category_id?: number;
   category_ids?: number[] | null;
   category_slugs?: string[] | null;
@@ -57,5 +59,15 @@ export type FeedbackRow = {
   status: "new" | "answered" | "archived";
   admin_reply: string | null;
   replied_at: string | null;
+  created_at: string;
+};
+
+export type ProfileClaimRow = {
+  id: string;
+  condo_id: string;
+  provider_id: string;
+  user_id: string;
+  note: string | null;
+  status: "pending" | "approved" | "rejected";
   created_at: string;
 };

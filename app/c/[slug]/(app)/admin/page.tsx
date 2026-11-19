@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/condo";
-import type { Category, CategoryGroup, FeedbackRow, ProviderRow, ReviewRow } from "@/lib/types";
+import type { Category, CategoryGroup, FeedbackRow, ProfileClaimRow, ProviderRow, ReviewRow } from "@/lib/types";
+import { formatWhatsapp } from "@/lib/phone";
 import { KIND_BY_VALUE } from "@/lib/feedback";
 import { groupCategories } from "@/lib/groups";
 import { capitalizeFirst, findSimilarCategories, groupSuggestions } from "@/lib/suggestions";
 import {
   adminClearFlag,
+  adminDecideClaim,
   adminReplyFeedback,
   adminSetFeedbackStatus,
   adminCreateCategory,
@@ -55,6 +57,15 @@ export default async function Admin({ params }: { params: Promise<{ slug: string
     const m = fbAuthors.find((a) => a.user_id === uid);
     return m ? `${m.full_name} · Bloco ${m.block}, ${m.unit}` : "Morador";
   };
+  const { data: claimData } = await supabase
+    .from("profile_claims").select("*").eq("condo_id", condo.id).eq("status", "pending").order("created_at", { ascending: true });
+  const claims = (claimData ?? []) as ProfileClaimRow[];
+  const claimProviders = claims.length
+    ? ((await supabase.from("providers").select("id,name,whatsapp,kind,block,created_by").in("id", claims.map((c) => c.provider_id))).data ?? [])
+    : [];
+  const claimMembers = claims.length
+    ? ((await supabase.from("members").select("user_id,full_name,block,unit").eq("condo_id", condo.id).in("user_id", claims.map((c) => c.user_id))).data ?? [])
+    : [];
   const fbNew = feedback.filter((f) => f.status === "new");
   const fbDone = feedback.filter((f) => f.status !== "new").slice(0, 15);
   const suggestions = groupSuggestions((pendingData ?? []) as { id: string; name: string; custom_category: string | null }[]);
@@ -76,6 +87,34 @@ export default async function Admin({ params }: { params: Promise<{ slug: string
         <h1 className="text-xl font-bold">Painel admin</h1>
         <p className="text-sm text-navy/60">{members ?? 0} moradores · {(recent ?? []).length}+ prestadores recentes</p>
       </div>
+
+      <section className="space-y-3">
+        <h2 className="font-semibold">🙋 Pedidos para assumir perfil ({claims.length})</h2>
+        {claims.map((c) => {
+          const prov = claimProviders.find((x) => x.id === c.provider_id);
+          const who = claimMembers.find((m) => m.user_id === c.user_id);
+          return (
+            <div key={c.id} className="card space-y-3">
+              <p>
+                <b>{who ? `${who.full_name} · Bloco ${who.block}, ${who.unit}` : "Morador"}</b> quer assumir o perfil{" "}
+                <Link className="font-bold underline" href={`/c/${slug}/p/${c.provider_id}`}>{prov?.name ?? "—"}</Link>
+              </p>
+              {prov && (
+                <p className="text-sm text-navy/70">
+                  WhatsApp do perfil: <b>{formatWhatsapp(prov.whatsapp)}</b> · {prov.kind === "resident" ? `Morador${prov.block ? ` (Bloco ${prov.block})` : ""}` : "Externo"}.
+                  Confirme que é a mesma pessoa (por exemplo, chamando nesse número) antes de aprovar.
+                </p>
+              )}
+              {c.note && <p className="rounded-2xl bg-sky-soft p-3 text-sm"><b>Recado:</b> {c.note}</p>}
+              <div className="flex flex-wrap gap-2">
+                <form action={adminDecideClaim.bind(null, slug, c.id, true)}><button className="btn !px-4 !py-2 !text-sm">Aprovar</button></form>
+                <form action={adminDecideClaim.bind(null, slug, c.id, false)}><button className="btn-secondary !px-4 !py-2 !text-sm">Recusar</button></form>
+              </div>
+            </div>
+          );
+        })}
+        {claims.length === 0 && <p className="text-sm text-navy/60">Nenhum pedido pendente.</p>}
+      </section>
 
       <section className="space-y-3">
         <h2 className="font-semibold">💬 Mensagens dos moradores ({fbNew.length} nova(s))</h2>

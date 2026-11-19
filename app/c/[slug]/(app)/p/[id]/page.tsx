@@ -6,8 +6,10 @@ import type { Category, CategoryGroup, ProviderRow, ReviewRow } from "@/lib/type
 import { Stars } from "@/components/Stars";
 import { providerCategoryLabels, parseCategoryIds } from "@/lib/categories";
 import { groupCategories } from "@/lib/groups";
-import { addCategoriesAndReturn } from "../../../actions";
+import { addCategoriesAndReturn, adminClearOwner } from "../../../actions";
 import { EditCategories } from "./EditCategories";
+import { EditProfile } from "./EditProfile";
+import { ClaimProfile } from "./ClaimProfile";
 import { ReportButton } from "@/components/ReportButton";
 import { ReviewForm } from "./ReviewForm";
 
@@ -33,7 +35,16 @@ export default async function Prestador({
   const msg = `Olá, ${p.name}! Vi seu perfil no Alguém indica? (${condo.name}). Pode me ajudar?`;
 
   // Categorias: só autor/admin editam. O aviso "já cadastrado" pode sugerir incluir uma categoria nova.
-  const canEdit = p.created_by === user.id || member.role === "admin";
+  // Com dono, só o dono (e o admin) editam; sem dono, quem indicou.
+  const isOwner = p.owner_id === user.id;
+  const canEdit = member.role === "admin" || (p.owner_id ? isOwner : p.created_by === user.id);
+  let hasPendingClaim = false;
+  if (!isOwner && !p.owner_id) {
+    const { count } = await supabase
+      .from("profile_claims").select("id", { count: "exact", head: true })
+      .eq("provider_id", id).eq("user_id", user.id).eq("status", "pending");
+    hasPendingClaim = (count ?? 0) > 0;
+  }
   const currentIds = p.category_ids?.length ? p.category_ids : p.category_id ? [p.category_id] : [];
   const wantedIds = parseCategoryIds((addcat ?? "").split(",")).filter((x) => !currentIds.includes(x));
   let sections: ReturnType<typeof groupCategories<CategoryGroup, Category>> = [];
@@ -93,6 +104,11 @@ export default async function Prestador({
           )}
           <div>
             <h1 className="text-xl font-bold">{p.name}</h1>
+            {p.owner_id && (
+              <span className="mt-0.5 inline-block rounded-full bg-green-50 px-2 py-0.5 text-xs font-bold text-green-700" title="O próprio profissional assumiu este perfil">
+                ✅ Perfil confirmado pelo próprio
+              </span>
+            )}
             <div className="text-sm text-navy/60">
               {providerCategoryLabels(p).join(" · ")} · {p.kind === "resident" ? `Morador${p.block ? ` (Bloco ${p.block})` : ""}` : "Externo indicado por morador"}
             </div>
@@ -107,11 +123,26 @@ export default async function Prestador({
         <a href={whatsappLink(p.whatsapp, msg)} target="_blank" rel="noopener noreferrer" className="btn w-full !bg-[#25D366] hover:!bg-[#1ebe57]">
           💬 Chamar no WhatsApp · {formatWhatsapp(p.whatsapp)}
         </a>
+        {canEdit && (
+          <details className="rounded-2xl border border-navy/10 p-3">
+            <summary className="cursor-pointer text-sm font-bold text-sky-brand">✏️ Editar perfil (nome, telefone, descrição e foto)</summary>
+            <EditProfile slug={slug} providerId={p.id} userId={user.id} initial={{ name: p.name, description: p.description, whatsapp: p.whatsapp, photo_url: p.photo_url }} />
+          </details>
+        )}
         {canEdit && sections.length > 0 && (
           <details className="rounded-2xl border border-navy/10 p-3">
             <summary className="cursor-pointer text-sm font-bold text-sky-brand">✏️ Editar categorias</summary>
             <EditCategories slug={slug} providerId={p.id} sections={sections} initialIds={currentIds} initialCustom={p.custom_category ?? ""} />
           </details>
+        )}
+        {isOwner && <p className="text-sm font-semibold text-green-700">Você é o dono deste perfil. 🎉</p>}
+        {!isOwner && !p.owner_id && (hasPendingClaim
+          ? <p className="rounded-2xl bg-amber-50 p-3 text-sm text-amber-900">⏳ Seu pedido para assumir este perfil está em análise.</p>
+          : <ClaimProfile slug={slug} providerId={p.id} />)}
+        {member.role === "admin" && p.owner_id && (
+          <form action={adminClearOwner.bind(null, slug, p.id)}>
+            <button className="text-xs font-semibold text-navy/50 underline">Admin: remover vínculo do dono</button>
+          </form>
         )}
         <ReportButton slug={slug} target="provider" id={p.id} />
       </div>

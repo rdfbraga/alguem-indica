@@ -1,20 +1,10 @@
 "use client";
 import { useActionState, useState } from "react";
 import { createProvider } from "../../actions";
-import { createClient } from "@/lib/supabase/client";
 import type { Category, FormState } from "@/lib/types";
 import type { GroupLike, Section } from "@/lib/groups";
 import { CategoryPicker } from "@/components/CategoryPicker";
-
-async function resizeImage(file: File, max = 800): Promise<Blob> {
-  const bmp = await createImageBitmap(file);
-  const scale = Math.min(1, max / Math.max(bmp.width, bmp.height));
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.round(bmp.width * scale);
-  canvas.height = Math.round(bmp.height * scale);
-  canvas.getContext("2d")!.drawImage(bmp, 0, 0, canvas.width, canvas.height);
-  return new Promise((res, rej) => canvas.toBlob((b) => (b ? res(b) : rej(new Error("resize"))), "image/jpeg", 0.85));
-}
+import { PhotoField } from "@/components/PhotoField";
 
 export function ProviderForm({
   slug,
@@ -30,30 +20,9 @@ export function ProviderForm({
   const [state, action, pending] = useActionState<FormState, FormData>(createProvider.bind(null, slug), undefined);
   const [kind, setKind] = useState<"resident" | "external">("external");
   const [categoryIds, setCategoryIds] = useState<number[]>([]);
-  const [photoUrl, setPhotoUrl] = useState("");
   const [uploading, setUploading] = useState(false);
-  const [photoError, setPhotoError] = useState("");
 
   const isOther = sections.flatMap((s) => s.categories).some((c) => categoryIds.includes(c.id) && c.slug === "outros");
-
-  async function onPhoto(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploading(true);
-    setPhotoError("");
-    try {
-      const blob = await resizeImage(file);
-      const path = `${userId}/${crypto.randomUUID()}.jpg`;
-      const supabase = createClient();
-      const { error } = await supabase.storage.from("provider-photos").upload(path, blob, { contentType: "image/jpeg" });
-      if (error) throw error;
-      setPhotoUrl(supabase.storage.from("provider-photos").getPublicUrl(path).data.publicUrl);
-    } catch {
-      setPhotoError("Não foi possível enviar a foto. Você pode continuar sem ela.");
-    } finally {
-      setUploading(false);
-    }
-  }
 
   return (
     <form action={action} className="space-y-4">
@@ -98,14 +67,11 @@ export function ProviderForm({
         <label className="label" htmlFor="description">Descrição (opcional)</label>
         <textarea id="description" name="description" rows={3} maxLength={500} className="input" placeholder="O que ele faz, horários, diferenciais…" />
       </div>
-      <div>
-        <label className="label" htmlFor="photo">Foto (opcional)</label>
-        <input id="photo" type="file" accept="image/*" onChange={onPhoto} className="block w-full text-sm" />
-        {uploading && <p className="mt-1 text-sm text-navy/60">Enviando foto…</p>}
-        {photoUrl && <p className="mt-1 text-sm font-semibold text-green-700">Foto enviada ✓</p>}
-        {photoError && <p className="mt-1 text-sm text-red-600">{photoError}</p>}
-        <input type="hidden" name="photo_url" value={photoUrl} />
-      </div>
+      <PhotoField userId={userId} onBusyChange={setUploading} />
+      <label className="flex items-start gap-2 rounded-2xl bg-sky-soft p-3 text-sm">
+        <input type="checkbox" name="is_me" className="mt-1 h-4 w-4" />
+        <span><b>Este profissional sou eu.</b> Vou pedir à administração para confirmar que o perfil é meu (aparece um selo “perfil confirmado”).</span>
+      </label>
       <p className="text-xs text-navy/60">
         Ao indicar, você confirma que tem autorização para divulgar o contato deste profissional. Evite incluir dados pessoais além do WhatsApp.
       </p>

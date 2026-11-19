@@ -90,6 +90,11 @@ export async function createProvider(slug: string, _: FormState, fd: FormData): 
     }
     return { error: "Não foi possível salvar. Tente de novo." };
   }
+  if (fd.get("is_me") === "on") {
+    // O autor diz que o perfil é dele: abre um pedido para o admin confirmar (ele já pode editar enquanto isso).
+    const { error: claimError } = await supabase.rpc("request_profile_claim", { p_provider: data.id, p_note: "Cadastrou o próprio perfil" });
+    if (claimError) console.error("request_profile_claim", claimError);
+  }
   if (cats.ids.length > 1 || cats.hasOther) {
     const { error: rpcError } = await supabase.rpc("set_provider_categories", {
       p_provider: data.id, p_category_ids: cats.ids, p_custom: cats.custom || null,
@@ -269,5 +274,65 @@ export async function adminSetFeedbackStatus(slug: string, id: string, status: "
   const { condo, supabase } = await requireAdmin(slug);
   if (!UUID.test(id)) return;
   await supabase.from("feedback").update({ status }).eq("id", id).eq("condo_id", condo.id);
+  revalidatePath(`/c/${slug}`, "layout");
+}
+
+// ─── Posse de perfil ───
+const CLAIM_ERRORS: [string, string][] = [
+  ["already_pending", "Você já tem um pedido em análise para este perfil."],
+  ["already_owner", "Você já é o dono deste perfil."],
+  ["already_owned", "Este perfil já tem dono. Se houver algo errado, fale com a administração."],
+  ["too_many", "Você já tem 3 pedidos em análise. Aguarde a resposta da administração."],
+];
+
+export async function requestProfileClaim(slug: string, providerId: string, _: FormState, fd: FormData): Promise<FormState> {
+  const { supabase } = await requireMember(slug);
+  if (!UUID.test(providerId)) return { error: "Perfil inválido." };
+  const note = str(fd, "note").slice(0, 300);
+  const { error } = await supabase.rpc("request_profile_claim", { p_provider: providerId, p_note: note || null });
+  if (error) {
+    const known = CLAIM_ERRORS.find(([k]) => error.message?.includes(k));
+    if (known) return { error: known[1] };
+    console.error("requestProfileClaim", error);
+    return { error: "Não foi possível enviar o pedido agora." };
+  }
+  revalidatePath(`/c/${slug}`, "layout");
+  return { ok: "Pedido enviado! A administração vai confirmar e você será o dono do perfil." };
+}
+
+export async function updateProviderProfile(slug: string, providerId: string, _: FormState, fd: FormData): Promise<FormState> {
+  const { supabase } = await requireMember(slug);
+  if (!UUID.test(providerId)) return { error: "Perfil inválido." };
+  const name = str(fd, "name");
+  const description = str(fd, "description");
+  const whatsapp = normalizeWhatsapp(str(fd, "whatsapp"));
+  const photo_url = str(fd, "photo_url");
+  if (name.length < 2 || name.length > 80) return { error: "O nome deve ter de 2 a 80 caracteres." };
+  if (!whatsapp) return { error: "WhatsApp inválido. Use o formato (11) 99999-8888." };
+  if (description.length > 500) return { error: "A descrição deve ter até 500 caracteres." };
+  const { error } = await supabase.rpc("update_provider_profile", {
+    p_provider: providerId, p_name: name, p_description: description, p_whatsapp: whatsapp, p_photo_url: photo_url || null,
+  });
+  if (error) {
+    if (error.code === "23505") return { error: "Este WhatsApp já está cadastrado em outro perfil." };
+    if (error.message?.includes("sem permiss")) return { error: "Só o dono do perfil (ou a administração) pode editar." };
+    console.error("updateProviderProfile", error);
+    return { error: "Não foi possível salvar." };
+  }
+  revalidatePath(`/c/${slug}`, "layout");
+  return { ok: "Perfil atualizado!" };
+}
+
+export async function adminDecideClaim(slug: string, claimId: string, approve: boolean) {
+  const { supabase } = await requireAdmin(slug);
+  if (!UUID.test(claimId)) return;
+  await supabase.rpc("decide_profile_claim", { p_claim: claimId, p_approve: approve });
+  revalidatePath(`/c/${slug}`, "layout");
+}
+
+export async function adminClearOwner(slug: string, providerId: string) {
+  const { supabase } = await requireAdmin(slug);
+  if (!UUID.test(providerId)) return;
+  await supabase.rpc("clear_provider_owner", { p_provider: providerId });
   revalidatePath(`/c/${slug}`, "layout");
 }
