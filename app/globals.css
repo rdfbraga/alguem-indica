@@ -2,14 +2,14 @@
 
 @theme {
   /* Paleta extraída do logo */
-  --color-brand-50: #fff4ec;
-  --color-brand-100: #ffe3cf;
-  --color-brand-500: #f26915;
-  --color-brand-600: #d4510a;
-  --color-brand-700: #b34108;
-  --color-navy: #12304f;
-  --color-sky-brand: #337db6;
-  --color-sky-soft: #e8f3fb;
+  --color-brand-50: #fff3ea;
+  --color-brand-100: #ffe0cc;
+  --color-brand-500: #f55a00;
+  --color-brand-600: #cc4700;
+  --color-brand-700: #a33600;
+  --color-navy: #1b3a59;
+  --color-sky-brand: #2b5f8e;
+  --color-sky-soft: #e8f0f7;
   --color-cream: #fffaf5;
   --font-sans: "Nunito Variable", ui-sans-serif, system-ui, sans-serif;
 }
