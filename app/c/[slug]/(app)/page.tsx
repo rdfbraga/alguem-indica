@@ -91,9 +91,9 @@ export default async function Home({
 
   return (
     <div className="space-y-6">
-      <section className="rounded-3xl bg-gradient-to-br from-brand-600 to-brand-700 p-5 text-white shadow-md">
+      <section className="rounded-3xl bg-gradient-to-br from-brand-500 to-[#e85400] p-5 text-white shadow-md">
         <h1 className="text-2xl font-extrabold">Olá, {firstName}! 👋</h1>
-        <p className="mt-1 text-white/90">Precisando de alguém de confiança? Veja quem os seus vizinhos indicam.</p>
+        <p className="mt-1 font-semibold text-white">Precisando de alguém de confiança? Veja quem os seus vizinhos indicam.</p>
       </section>
       <SearchBox slug={slug} q="" suggestions={suggestions} />
 

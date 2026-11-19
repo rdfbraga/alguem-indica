@@ -32,7 +32,7 @@ export default async function AppLayout({
         <div className="flex shrink-0 items-center gap-3 text-sm">
           {member.role === "admin" && (
             <Link href={`/c/${slug}/admin`} className="rounded-xl bg-sky-soft px-2.5 py-1 font-bold text-sky-brand">
-              Admin{newMessages > 0 && <span className="ml-1 rounded-full bg-brand-600 px-1.5 text-xs text-white">{newMessages}</span>}
+              Admin{newMessages > 0 && <span className="ml-1 rounded-full bg-brand-500 px-1.5 text-xs text-white">{newMessages}</span>}
             </Link>
           )}
           <Link href={`/c/${slug}/ajuda`} className="flex items-center gap-1 whitespace-nowrap font-semibold text-navy/60 hover:text-navy" aria-label="Ajuda e contato">💬 <span>Ajuda</span></Link>

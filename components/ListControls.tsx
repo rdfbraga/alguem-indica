@@ -16,7 +16,7 @@ function Chip({ to, active, children }: { to: string; active: boolean; children:
       scroll={false}
       aria-current={active ? "true" : undefined}
       className={`whitespace-nowrap rounded-full border-2 px-3 py-1 text-sm font-bold transition ${
-        active ? "border-brand-600 bg-brand-600 text-white" : "border-navy/15 bg-white text-navy hover:border-sky-brand/50"
+        active ? "border-brand-500 bg-brand-500 text-white" : "border-navy/15 bg-white text-navy hover:border-sky-brand/50"
       }`}
     >
       {children}

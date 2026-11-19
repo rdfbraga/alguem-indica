@@ -29,7 +29,7 @@ export function CategoryPicker({
             <input type="hidden" name="category_id" value={id} />
             <span className="flex-1 text-sm font-bold">
               {c.icon} {c.name}
-              {i === 0 && <span className="ml-2 rounded-full bg-brand-600 px-2 py-0.5 text-[10px] font-bold uppercase text-white">principal</span>}
+              {i === 0 && <span className="ml-2 rounded-full bg-brand-500 px-2 py-0.5 text-[10px] font-bold uppercase text-white">principal</span>}
             </span>
             {i > 0 && (
               <button type="button" onClick={() => onChange([id, ...value.filter((x) => x !== id)])} className="text-xs font-semibold text-sky-brand underline">
