@@ -1,0 +1,40 @@
+export type Condo = { id: string; slug: string; name: string };
+export type Member = {
+  user_id: string;
+  condo_id: string;
+  full_name: string;
+  block: string;
+  unit: string;
+  role: "resident" | "admin";
+};
+export type Category = { id: number; slug: string; name: string; icon: string };
+export type ProviderRow = {
+  id: string;
+  condo_id: string;
+  name: string;
+  description: string;
+  whatsapp: string;
+  photo_url: string | null;
+  kind: "resident" | "external";
+  block: string | null;
+  status: "active" | "hidden";
+  flagged: boolean;
+  flag_reason: string | null;
+  created_at: string;
+  category_slug: string;
+  category_name: string;
+  category_icon: string;
+  avg_rating: number;
+  review_count: number;
+};
+export type ReviewRow = {
+  id: string;
+  provider_id: string;
+  author_id: string;
+  author_label: string;
+  rating: number;
+  comment: string;
+  status: "visible" | "hidden";
+  created_at: string;
+};
+export type FormState = { error?: string; ok?: string } | undefined;
