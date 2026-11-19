@@ -3,7 +3,7 @@ import type { ProviderRow } from "@/lib/types";
 import { Stars } from "./Stars";
 import { providerCategoryLabels } from "@/lib/categories";
 
-export function ProviderCard({ slug, p }: { slug: string; p: ProviderRow }) {
+export function ProviderCard({ slug, p, planBadge = false }: { slug: string; p: ProviderRow; planBadge?: boolean }) {
   return (
     <Link href={`/c/${slug}/p/${p.id}`} className="card flex items-center gap-3 transition hover:-translate-y-0.5 hover:border-brand-500">
       {p.photo_url ? (
@@ -15,7 +15,7 @@ export function ProviderCard({ slug, p }: { slug: string; p: ProviderRow }) {
         </div>
       )}
       <div className="min-w-0 flex-1">
-        <div className="truncate font-extrabold">{p.name}</div>
+        <div className="truncate font-extrabold">{p.name}{planBadge && p.plan_active ? <span className="ml-1.5 rounded-full bg-brand-50 px-1.5 py-0.5 align-middle text-[10px] font-bold text-brand-700">⭐ Destaque</span> : null}</div>
         <div className="truncate text-sm text-navy/60">
           {providerCategoryLabels(p).join(" · ")}
           {p.kind === "resident" ? ` · Morador${p.block ? ` (Bloco ${p.block})` : ""}` : " · Externo indicado"}

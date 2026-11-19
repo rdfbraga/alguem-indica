@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requireMember } from "@/lib/condo";
+import { getFeatures, requireMember } from "@/lib/condo";
 import type { Category, ProviderRow } from "@/lib/types";
 import { filterKind, parseKind, parseOrder, sortProviders } from "@/lib/listing";
 import { ProviderCard } from "@/components/ProviderCard";
@@ -18,6 +18,7 @@ export default async function Categoria({
   const order = parseOrder(sp.ordem, false);
   const kind = parseKind(sp.tipo);
   const { condo, supabase } = await requireMember(slug);
+  const flags = await getFeatures(condo.id);
   const { data: category } = await supabase.from("categories").select("*").eq("slug", cat).maybeSingle();
   if (!category) notFound();
   // Um perfil aparece em todas as suas categorias. (Se a migration 0007 ainda não rodou, usa só a principal.)
@@ -42,7 +43,7 @@ export default async function Categoria({
       {all.length > 1 && (
         <ListControls base={`/c/${slug}/categoria/${cat}`} order={order} kind={kind} orders={["melhores", "avaliados", "recentes"]} />
       )}
-      {providers.map((p) => <ProviderCard key={p.id} slug={slug} p={p} />)}
+      {providers.map((p) => <ProviderCard key={p.id} slug={slug} p={p} planBadge={flags.plans} />)}
       {providers.length === 0 && all.length > 0 && (
         <p className="card text-center text-navy/70">Ninguém neste filtro. Tente ver “Todos”.</p>
       )}

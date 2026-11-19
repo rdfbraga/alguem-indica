@@ -1,15 +1,20 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requireMember } from "@/lib/condo";
+import { getFeatures, requireMember } from "@/lib/condo";
 import { formatWhatsapp } from "@/lib/phone";
 import { instagramUrl, websiteLabel } from "@/lib/links";
 import { ViewTracker } from "@/components/ViewTracker";
 import type { ProviderStats } from "@/lib/stats";
-import type { Category, CategoryGroup, ProviderRow, ReviewRow } from "@/lib/types";
+import type { Category, CategoryGroup, PhotoRow, ProviderRow, ReviewRow, ServiceRow } from "@/lib/types";
+import { premiumAvailable, premiumTeaser, type PlanRow } from "@/lib/features";
+import { PlanCard } from "@/components/PlanCard";
+import { ShowcaseView } from "@/components/ShowcaseView";
+import { ShowcaseEditor } from "./ShowcaseEditor";
+import { ReplyBox } from "./ReplyBox";
 import { Stars } from "@/components/Stars";
 import { providerCategoryLabels, parseCategoryIds } from "@/lib/categories";
 import { groupCategories } from "@/lib/groups";
-import { addCategoriesAndReturn, adminClearOwner } from "../../../actions";
+import { addCategoriesAndReturn, adminClearOwner, deleteReviewReply } from "../../../actions";
 import { EditCategories } from "./EditCategories";
 import { EditProfile } from "./EditProfile";
 import { ClaimProfile } from "./ClaimProfile";
@@ -21,10 +26,10 @@ export default async function Prestador({
   searchParams,
 }: {
   params: Promise<{ slug: string; id: string }>;
-  searchParams: Promise<{ novo?: string; jaexiste?: string; addcat?: string; catsOk?: string; catsErro?: string }>;
+  searchParams: Promise<{ novo?: string; jaexiste?: string; addcat?: string; catsOk?: string; catsErro?: string; plano?: string }>;
 }) {
   const { slug, id } = await params;
-  const { novo, jaexiste, addcat, catsOk, catsErro } = await searchParams;
+  const { novo, jaexiste, addcat, catsOk, catsErro, plano } = await searchParams;
   const { condo, user, member, supabase } = await requireMember(slug);
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
 
@@ -53,6 +58,38 @@ export default async function Prestador({
       .eq("provider_id", id).eq("user_id", user.id).eq("status", "pending");
     hasPendingClaim = (count ?? 0) > 0;
   }
+  // Etapa 2: chaves, plano, vitrine e respostas (tudo desligado por padrão).
+  const flags = await getFeatures(condo.id);
+  const isAdmin = member.role === "admin";
+  const planActive = p.plan_active === true;
+  const canShowcase = premiumAvailable(flags, planActive, "showcase");
+  const canReplyHere = isOwner && premiumAvailable(flags, planActive, "replies");
+  const showcaseTeaser = isOwner && premiumTeaser(flags, planActive, "showcase");
+  const repliesTeaser = isOwner && premiumTeaser(flags, planActive, "replies");
+  let plan: PlanRow | null = null;
+  if (flags.plans && (isOwner || isAdmin)) {
+    const { data: pl } = await supabase.from("provider_plans").select("current_period_end,trial_used,source,note").eq("provider_id", id).maybeSingle();
+    plan = (pl ?? null) as PlanRow | null;
+  }
+  let services: ServiceRow[] = [];
+  let photos: PhotoRow[] = [];
+  if (canShowcase) {
+    const [{ data: sv }, { data: ph }] = await Promise.all([
+      supabase.from("provider_services").select("id,provider_id,title,description,price_text,sort").eq("provider_id", id).order("sort"),
+      supabase.from("provider_photos").select("id,provider_id,url,caption,sort").eq("provider_id", id).order("sort"),
+    ]);
+    services = (sv ?? []) as ServiceRow[];
+    photos = (ph ?? []) as PhotoRow[];
+  }
+  const planMsg: Record<string, [string, "ok" | "warn"]> = {
+    ok: ["Teste grátis ativado! Você tem 30 dias com vitrine, fotos e respostas às avaliações. 🎉", "ok"],
+    trial_used: ["O teste grátis já foi usado neste perfil.", "warn"],
+    already_active: ["O plano deste perfil já está ativo.", "warn"],
+    plans_off: ["O plano Destaque ainda não está disponível.", "warn"],
+    not_owner: ["Só o dono do perfil pode iniciar o teste.", "warn"],
+    erro: ["Não foi possível ativar o teste agora. Tente de novo.", "warn"],
+  };
+  const flash = plano ? planMsg[plano] : undefined;
   const currentIds = p.category_ids?.length ? p.category_ids : p.category_id ? [p.category_id] : [];
   const wantedIds = parseCategoryIds((addcat ?? "").split(",")).filter((x) => !currentIds.includes(x));
   let sections: ReturnType<typeof groupCategories<CategoryGroup, Category>> = [];
@@ -74,6 +111,7 @@ export default async function Prestador({
       <Link href={`/c/${slug}/categoria/${p.category_slug}`} className="text-sm text-navy/60">← {p.category_name}</Link>
       {novo && <p className="rounded-2xl bg-green-50 p-3 text-sm font-semibold text-green-700">Indicação publicada! Obrigado por ajudar os vizinhos. 🎉</p>}
       {jaexiste && <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-800">Este profissional já estava cadastrado. Que tal avaliá-lo?</p>}
+      {flash && <p className={`rounded-2xl p-3 text-sm font-semibold ${flash[1] === "ok" ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-900"}`}>{flash[0]}</p>}
       {catsOk && <p className="rounded-2xl bg-green-50 p-3 text-sm font-semibold text-green-700">Categorias atualizadas! ✅</p>}
       {catsErro && <p className="rounded-2xl bg-red-50 p-3 text-sm text-red-700">Não foi possível atualizar as categorias. Tente de novo pelo botão “Editar categorias”.</p>}
       {wantedNames.length > 0 && (
@@ -113,6 +151,9 @@ export default async function Prestador({
           )}
           <div>
             <h1 className="text-xl font-bold">{p.name}</h1>
+            {flags.plans && planActive && (
+              <span className="mr-1 mt-0.5 inline-block rounded-full bg-brand-50 px-2 py-0.5 text-xs font-bold text-brand-700">⭐ Destaque</span>
+            )}
             {p.owner_id && (
               <span className="mt-0.5 inline-block rounded-full bg-green-50 px-2 py-0.5 text-xs font-bold text-green-700" title="O próprio profissional assumiu este perfil">
                 ✅ Perfil confirmado pelo próprio
@@ -164,6 +205,18 @@ export default async function Prestador({
             <EditCategories slug={slug} providerId={p.id} sections={sections} initialIds={currentIds} initialCustom={p.custom_category ?? ""} />
           </details>
         )}
+        {flags.plans && (isOwner || isAdmin) && <PlanCard slug={slug} provider={{ id: p.id, name: p.name }} plan={plan} isOwner={isOwner} isAdmin={isAdmin} />}
+        {canShowcase && canEdit && (
+          <details className="rounded-2xl border border-navy/10 p-3">
+            <summary className="cursor-pointer text-sm font-bold text-sky-brand">🛍️ Editar vitrine (serviços, preços, horários e fotos)</summary>
+            <ShowcaseEditor slug={slug} providerId={p.id} userId={user.id} initialHours={p.hours_text ?? ""} initialServices={services} photos={photos} />
+          </details>
+        )}
+        {(showcaseTeaser || repliesTeaser) && (
+          <p className="rounded-2xl border border-dashed border-brand-500/50 p-3 text-sm text-navy/75">
+            🔒 {showcaseTeaser ? "Vitrine com serviços e preços, fotos e horários" : ""}{showcaseTeaser && repliesTeaser ? " e " : ""}{repliesTeaser ? "respostas às avaliações" : ""} fazem parte do <b>plano Destaque</b>. Veja as opções acima.
+          </p>
+        )}
         {isOwner && <p className="text-sm font-semibold text-green-700">Você é o dono deste perfil. 🎉</p>}
         {!isOwner && !p.owner_id && (hasPendingClaim
           ? <p className="rounded-2xl bg-amber-50 p-3 text-sm text-amber-900">⏳ Seu pedido para assumir este perfil está em análise.</p>
@@ -176,6 +229,8 @@ export default async function Prestador({
         <ReportButton slug={slug} target="provider" id={p.id} />
       </div>
 
+      {canShowcase && <ShowcaseView hours={p.hours_text ?? null} services={services} photos={photos} />}
+
       {!mine && <ReviewForm slug={slug} providerId={p.id} />}
 
       <section className="space-y-3">
@@ -187,6 +242,18 @@ export default async function Prestador({
               <Stars value={r.rating} size="text-sm" />
             </div>
             {r.comment && <p className="text-navy/80">{r.comment}</p>}
+            {flags.replies && r.reply_text && (
+              <div className="mt-1 rounded-2xl bg-sky-soft p-3 text-sm">
+                <p className="text-xs font-bold text-sky-brand">Resposta de {p.name}{r.reply_at ? ` · ${new Date(r.reply_at).toLocaleDateString("pt-BR")}` : ""}</p>
+                <p className="mt-1 whitespace-pre-line text-navy/90">{r.reply_text}</p>
+                {isAdmin && !isOwner && (
+                  <form action={deleteReviewReply.bind(null, slug, r.id)} className="mt-1">
+                    <button className="text-xs font-semibold text-red-700 underline">Admin: remover resposta</button>
+                  </form>
+                )}
+              </div>
+            )}
+            {canReplyHere && <ReplyBox slug={slug} reviewId={r.id} initial={r.reply_text ?? null} />}
             <div className="flex items-center justify-between text-xs text-navy/45">
               <span>{new Date(r.created_at).toLocaleDateString("pt-BR")}</span>
               {r.author_id !== user.id && <ReportButton slug={slug} target="review" id={r.id} />}

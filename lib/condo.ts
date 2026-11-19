@@ -2,6 +2,7 @@ import { cache } from "react";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { Condo, Member } from "@/lib/types";
+import { parseFlags, type Flags } from "@/lib/features";
 
 export const getCondo = cache(async (slug: string): Promise<Condo> => {
   const supabase = await createClient();
@@ -48,3 +49,10 @@ export function safeNext(next: string | null | undefined, fallback: string): str
   if (next && next.startsWith("/") && !next.startsWith("//") && !next.includes("\\")) return next;
   return fallback;
 }
+
+/** Chaves de funcionalidades do condomínio (tudo desligado se a tabela ainda não existir). */
+export const getFeatures = cache(async (condoId: string): Promise<Flags> => {
+  const supabase = await createClient();
+  const { data } = await supabase.from("condo_features").select("feature,enabled").eq("condo_id", condoId);
+  return parseFlags(data);
+});

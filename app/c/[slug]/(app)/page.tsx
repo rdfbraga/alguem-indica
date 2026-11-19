@@ -1,11 +1,14 @@
 import Link from "next/link";
-import { requireMember } from "@/lib/condo";
+import { getFeatures, requireMember } from "@/lib/condo";
 import type { Category, CategoryGroup, ProviderRow } from "@/lib/types";
 import { groupCategories } from "@/lib/groups";
 import { filterKind, parseKind, parseOrder, sortProviders } from "@/lib/listing";
 import { ProviderCard } from "@/components/ProviderCard";
 import { ListControls } from "@/components/ListControls";
 import { SearchBox } from "@/components/SearchBox";
+import { AdCard } from "@/components/AdCard";
+import { adIsLive, todayInSaoPaulo } from "@/lib/features";
+import type { AdRow } from "@/lib/types";
 
 function CategoryTile({ slug, c }: { slug: string; c: Category }) {
   return (
@@ -32,6 +35,7 @@ export default async function Home({
   const q = (sp.q ?? "").trim().slice(0, 60);
   const { condo, user, member, supabase } = await requireMember(slug);
   const firstName = member.full_name.split(" ")[0];
+  const flags = await getFeatures(condo.id);
 
   const [{ data: catData }, { data: groupData }] = await Promise.all([
     supabase.from("categories").select("*").order("sort"),
@@ -56,7 +60,7 @@ export default async function Home({
         <SearchBox slug={slug} q={q} suggestions={suggestions} />
         <h2 className="font-extrabold">{results.length} resultado(s) para “{q}”</h2>
         <ListControls base={`/c/${slug}`} q={q} order={order} kind={kind} orders={["relevancia", "melhores", "avaliados", "recentes"]} />
-        {results.map((p) => <ProviderCard key={p.id} slug={slug} p={p} />)}
+        {results.map((p) => <ProviderCard key={p.id} slug={slug} p={p} planBadge={flags.plans} />)}
         {results.length === 0 && (
           <div className="card space-y-3 text-center text-navy/70">
             <p>Ninguém indicado para essa busca ainda. Conhece alguém?{" "}
@@ -88,6 +92,14 @@ export default async function Home({
   const topRated = sortProviders(providers.filter((p) => p.review_count > 0), "melhores").slice(0, 5);
   const topIds = new Set(topRated.map((p) => p.id));
   const newest = providers.filter((p) => !topIds.has(p.id)).slice(0, 5);
+
+  // Anúncio local (só com a chave ligada): sorteia um dos vigentes a cada visita.
+  let ad: AdRow | null = null;
+  if (flags.ads) {
+    const { data: adsData } = await supabase.from("ads").select("*").eq("condo_id", condo.id).eq("active", true).limit(20);
+    const live = ((adsData ?? []) as AdRow[]).filter((a) => adIsLive(a, todayInSaoPaulo()));
+    ad = live.length ? live[Math.floor(Math.random() * live.length)] : null;
+  }
 
   const { count: ownedCount } = await supabase
     .from("providers").select("id", { count: "exact", head: true })
@@ -127,16 +139,18 @@ export default async function Home({
         </div>
       </section>
 
+      {ad && <AdCard slug={slug} ad={ad} />}
+
       {topRated.length > 0 && (
         <section className="space-y-3">
           <h2 className="text-lg font-extrabold">⭐ Mais bem avaliados do condomínio</h2>
-          {topRated.map((p) => <ProviderCard key={p.id} slug={slug} p={p} />)}
+          {topRated.map((p) => <ProviderCard key={p.id} slug={slug} p={p} planBadge={flags.plans} />)}
         </section>
       )}
       {newest.length > 0 && (
         <section className="space-y-3">
           <h2 className="text-lg font-extrabold">🆕 Indicações recentes</h2>
-          {newest.map((p) => <ProviderCard key={p.id} slug={slug} p={p} />)}
+          {newest.map((p) => <ProviderCard key={p.id} slug={slug} p={p} planBadge={flags.plans} />)}
         </section>
       )}
       {providers.length === 0 && (

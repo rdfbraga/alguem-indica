@@ -9,7 +9,7 @@ export default function Privacidade() {
         <li><b>Moradores:</b> e-mail (ou conta Google), nome, bloco/torre e unidade.</li>
         <li><b>Prestadores indicados:</b> nome, categoria, descrição, foto (opcional) e número de WhatsApp, informados por um morador.</li>
         <li><b>Avaliações e denúncias</b> feitas na plataforma.</li>
-        <li><b>Uso do app:</b> visitas a perfis e cliques em “Chamar no WhatsApp”, Instagram e site. Servem para gerar relatórios de resultados aos prestadores e à administração.</li>
+        <li><b>Uso do app:</b> visitas a perfis e cliques em “Chamar no WhatsApp”, Instagram e site. Servem para gerar relatórios de resultados aos prestadores e à administração. O mesmo vale para exibições e cliques em anúncios de parceiros do condomínio, que o anunciante vê apenas como totais.</li>
       </ul>
       <h2 className="text-lg font-semibold">Para que usamos</h2>
       <p>Para autenticar você, mostrar indicações aos vizinhos do mesmo condomínio, evitar avaliações falsas e moderar conteúdo. Não vendemos seus dados.</p>

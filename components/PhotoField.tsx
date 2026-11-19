@@ -17,10 +17,16 @@ export function PhotoField({
   userId,
   initialUrl = "",
   onBusyChange,
+  bucket = "provider-photos",
+  label = "Foto (opcional)",
+  name = "photo_url",
 }: {
   userId: string;
   initialUrl?: string;
   onBusyChange?: (busy: boolean) => void;
+  bucket?: "provider-photos" | "ad-images";
+  label?: string;
+  name?: string;
 }) {
   const [photoUrl, setPhotoUrl] = useState(initialUrl);
   const [uploading, setUploading] = useState(false);
@@ -36,9 +42,9 @@ export function PhotoField({
       const blob = await resizeImage(file);
       const path = `${userId}/${crypto.randomUUID()}.jpg`;
       const supabase = createClient();
-      const { error: upErr } = await supabase.storage.from("provider-photos").upload(path, blob, { contentType: "image/jpeg" });
+      const { error: upErr } = await supabase.storage.from(bucket).upload(path, blob, { contentType: "image/jpeg" });
       if (upErr) throw upErr;
-      setPhotoUrl(supabase.storage.from("provider-photos").getPublicUrl(path).data.publicUrl);
+      setPhotoUrl(supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl);
     } catch {
       setError("Não foi possível enviar a foto. Você pode continuar sem ela.");
     } finally {
@@ -49,7 +55,7 @@ export function PhotoField({
 
   return (
     <div>
-      <label className="label" htmlFor="photo">Foto (opcional)</label>
+      <label className="label" htmlFor={`photo-${name}`}>{label}</label>
       {photoUrl && (
         <div className="mb-2 flex items-center gap-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -57,10 +63,10 @@ export function PhotoField({
           <button type="button" onClick={() => setPhotoUrl("")} className="text-sm font-semibold text-sky-brand underline">Remover foto</button>
         </div>
       )}
-      <input id="photo" type="file" accept="image/*" onChange={onPhoto} className="block w-full text-sm" />
+      <input id={`photo-${name}`} type="file" accept="image/*" onChange={onPhoto} className="block w-full text-sm" />
       {uploading && <p className="mt-1 text-sm text-navy/60">Enviando foto…</p>}
       {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
-      <input type="hidden" name="photo_url" value={photoUrl} />
+      <input type="hidden" name={name} value={photoUrl} />
     </div>
   );
 }

@@ -1,7 +1,7 @@
 -- ============================================================================
 -- DADOS DE TESTE do Alguém indica? — rode no SQL Editor do Supabase.
 --  * Cria ~170 prestadores (3 a 4 por categoria, nas ~50 categorias) e 15 vizinhos FICTÍCIOS que avaliam.
---  * Requer as migrations 0004, 0005 e 0007 (categorias novas e várias categorias por perfil); com a 0009 também cria visitas, cliques, Instagram e site. Alguns ficam em "Outros" com categoria sugerida.
+--  * Requer as migrations 0004, 0005 e 0007 (categorias novas e várias categorias por perfil); com a 0009 também cria visitas, cliques, Instagram e site; com a 0010, perfis com plano/vitrine/respostas e 3 anúncios (as chaves continuam desligadas). Alguns ficam em "Outros" com categoria sugerida.
 --  * Usa o condomínio mais antigo cadastrado (troque v_slug para escolher outro).
 --  * Pode rodar de novo: apaga os dados de teste anteriores antes de recriar.
 --  * Para remover tudo depois: rode supabase/dev/test_data_cleanup.sql.
@@ -38,6 +38,7 @@ begin
   delete from public.reviews   where author_id  in (select id from auth.users where email like '%' || v_domain);
   delete from public.members   where user_id    in (select id from auth.users where email like '%' || v_domain);
   delete from auth.users       where email like '%' || v_domain;
+  if to_regclass('public.ads') is not null then delete from public.ads where advertiser like 'Teste · %'; end if;
 
   -- 15 vizinhos fictícios
   for u in
@@ -280,6 +281,32 @@ begin
       from public.providers pr
       cross join lateral generate_series(1, (power(random(), 2) * 70)::int + 1) g(n)
      where pr.created_by = any (v_user_ids);
+  end if;
+
+  -- (migration 0010) perfis com dono e plano, vitrine, respostas e anúncios — para ver tudo assim que as chaves forem ligadas
+  if to_regclass('public.provider_plans') is not null and exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'providers' and column_name = 'owner_id') then
+    create temp table tmp_chosen on commit drop as
+      select pr.id, pr.created_by, pr.condo_id, (row_number() over (order by random()))::int as rn
+        from public.providers pr where pr.created_by = any (v_user_ids) order by random() limit 14;
+    update public.providers pr
+       set owner_id = c.created_by, owner_since = now() - interval '10 days',
+           hours_text = E'Seg a sex: 8h às 18h\nSáb: 8h às 12h'
+      from tmp_chosen c where pr.id = c.id;
+    -- ímpares: plano concedido; pares: teste grátis em andamento
+    insert into public.provider_plans (provider_id, condo_id, source, trial_used, current_period_end)
+      select id, condo_id, case when rn % 2 = 0 then 'trial' else 'manual' end, rn % 2 = 0, now() + ((5 + rn * 2) || ' days')::interval from tmp_chosen;
+    insert into public.provider_services (provider_id, condo_id, title, description, price_text, sort)
+      select c.id, c.condo_id, s.t, s.d, s.p, s.o
+        from tmp_chosen c cross join (values
+          ('Visita e orçamento','Sem compromisso','Grátis',0),
+          ('Serviço padrão','Mão de obra',null,1),
+          ('Serviço completo','Com material incluso','a partir de R$ 150',2)) s(t, d, p, o);
+    update public.reviews rv set reply_text = 'Obrigado pela avaliação! Foi um prazer atender.', reply_at = now() - interval '2 days'
+     where rv.provider_id in (select id from tmp_chosen) and rv.rating >= 4 and random() < 0.6;
+    insert into public.ads (condo_id, advertiser, title, body, link_url, whatsapp, cta_label)
+      values (v_condo, 'Teste · Pizzaria Boa', 'Pizza em dobro às terças', 'Peça pelo site ou WhatsApp e ganhe borda recheada.', 'https://exemplo.com.br/pizzaria', null, 'Pedir agora'),
+             (v_condo, 'Teste · Pet Feliz', 'Banho e tosa com 20% off', 'Para moradores do condomínio, de segunda a quinta.', null, '5511900000099', 'Chamar no WhatsApp'),
+             (v_condo, 'Teste · Academia Vida', 'Primeira semana grátis', null, 'https://exemplo.com.br/academia', null, 'Quero conhecer');
   end if;
 
   raise notice 'Pronto: % prestadores e % avaliações de teste.',

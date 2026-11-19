@@ -1,12 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { getCondo, getUser } from "@/lib/condo";
+import { getCondo, getFeatures, getUser } from "@/lib/condo";
 import { createClient } from "@/lib/supabase/server";
 import { whatsappLink } from "@/lib/phone";
 import { instagramUrl } from "@/lib/links";
 
 export const dynamic = "force-dynamic";
 
-const KINDS = ["whatsapp", "instagram", "website"] as const;
+const KINDS = ["whatsapp", "instagram", "website", "ad"] as const;
 type Kind = (typeof KINDS)[number];
 
 // Registra o clique e leva ao destino (WhatsApp, Instagram ou site do prestador).
@@ -21,6 +21,22 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   if (!KINDS.includes(kind as Kind) || !/^[0-9a-f-]{36}$/i.test(id)) return back(`/c/${slug}`);
 
   const supabase = await createClient();
+
+  if (kind === "ad") {
+    // Anúncio: só se a chave estiver ligada e o anúncio vigente (o banco aplica isso via RLS e na função de registro).
+    const { data: ad } = await supabase.from("ads").select("advertiser,link_url,whatsapp,active").eq("id", id).eq("condo_id", condo.id).maybeSingle();
+    if (!ad || !ad.active || !(await getFeatures(condo.id)).ads) return back(`/c/${slug}`);
+    const adTarget = ad.link_url && /^https?:\/\//i.test(ad.link_url)
+      ? ad.link_url
+      : ad.whatsapp ? whatsappLink(ad.whatsapp, `Olá! Vi o anúncio de ${ad.advertiser} no Alguém indica? (${condo.name}).`) : null;
+    if (!adTarget) return back(`/c/${slug}`);
+    await supabase.rpc("log_ad_event", { p_ad: id, p_kind: "click" });
+    const adRes = NextResponse.redirect(adTarget, 302);
+    adRes.headers.set("Cache-Control", "no-store");
+    adRes.headers.set("Referrer-Policy", "no-referrer");
+    return adRes;
+  }
+
   const { data: p } = await supabase
     .from("provider_listing").select("name,whatsapp,instagram,website").eq("id", id).eq("condo_id", condo.id).maybeSingle();
   if (!p) return back(`/c/${slug}`);

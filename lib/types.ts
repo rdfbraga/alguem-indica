@@ -22,6 +22,8 @@ export type ProviderRow = {
   custom_category_reviewed: boolean;
   created_by?: string;
   instagram?: string | null;
+  hours_text?: string | null;
+  plan_active?: boolean;
   website?: string | null;
   owner_id?: string | null;
   owner_since?: string | null;
@@ -48,6 +50,8 @@ export type ReviewRow = {
   comment: string;
   status: "visible" | "hidden";
   created_at: string;
+  reply_text?: string | null;
+  reply_at?: string | null;
 };
 export type FormState = { error?: string; ok?: string } | undefined;
 
@@ -71,5 +75,23 @@ export type ProfileClaimRow = {
   user_id: string;
   note: string | null;
   status: "pending" | "approved" | "rejected";
+  created_at: string;
+};
+
+export type ServiceRow = { id: string; provider_id: string; title: string; description: string | null; price_text: string | null; sort: number };
+export type PhotoRow = { id: string; provider_id: string; url: string; caption: string | null; sort: number };
+export type AdRow = {
+  id: string;
+  condo_id: string;
+  advertiser: string;
+  title: string;
+  body: string | null;
+  image_url: string | null;
+  link_url: string | null;
+  whatsapp: string | null;
+  cta_label: string;
+  starts_on: string | null;
+  ends_on: string | null;
+  active: boolean;
   created_at: string;
 };

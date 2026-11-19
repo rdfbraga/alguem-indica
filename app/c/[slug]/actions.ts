@@ -9,6 +9,7 @@ import { normalizeInstagram, normalizeWebsite } from "@/lib/links";
 import type { FormState } from "@/lib/types";
 import { parseFeedbackKind, validateMessage } from "@/lib/feedback";
 import { MAX_CATEGORIES, parseCategoryIds } from "@/lib/categories";
+import { FEATURES } from "@/lib/features";
 
 const str = (fd: FormData, k: string) => String(fd.get(k) ?? "").trim();
 
@@ -346,5 +347,168 @@ export async function adminClearOwner(slug: string, providerId: string) {
   const { supabase } = await requireAdmin(slug);
   if (!UUID.test(providerId)) return;
   await supabase.rpc("clear_provider_owner", { p_provider: providerId });
+  revalidatePath(`/c/${slug}`, "layout");
+}
+
+// ─── Etapa 2: chaves, plano Destaque, vitrine, respostas e anúncios ───
+export async function adminSetFeature(slug: string, feature: string, enabled: boolean) {
+  const { condo, supabase } = await requireAdmin(slug);
+  if (!(FEATURES as readonly string[]).includes(feature)) return;
+  await supabase
+    .from("condo_features")
+    .upsert({ condo_id: condo.id, feature, enabled, updated_at: new Date().toISOString() }, { onConflict: "condo_id,feature" });
+  revalidatePath(`/c/${slug}`, "layout");
+}
+
+export async function startTrial(slug: string, providerId: string) {
+  const { supabase } = await requireMember(slug);
+  if (!UUID.test(providerId)) redirect(`/c/${slug}`);
+  const { error } = await supabase.rpc("start_trial", { p_provider: providerId });
+  let flag = "ok";
+  if (error) {
+    const known = ["trial_used", "already_active", "plans_off", "not_owner"].find((k) => error.message?.includes(k));
+    flag = known ?? "erro";
+    if (!known) console.error("start_trial", error);
+  }
+  revalidatePath(`/c/${slug}`, "layout");
+  redirect(`/c/${slug}/p/${providerId}?plano=${flag}`);
+}
+
+export async function adminGrantPlan(slug: string, providerId: string, fd: FormData) {
+  const { supabase } = await requireAdmin(slug);
+  const days = Number(fd.get("days"));
+  if (!UUID.test(providerId) || !Number.isInteger(days) || days < 1 || days > 366) return;
+  await supabase.rpc("grant_plan", { p_provider: providerId, p_days: days, p_note: str(fd, "note").slice(0, 200) || null });
+  revalidatePath(`/c/${slug}`, "layout");
+}
+
+export async function adminCancelPlan(slug: string, providerId: string) {
+  const { supabase } = await requireAdmin(slug);
+  if (!UUID.test(providerId)) return;
+  await supabase.rpc("cancel_plan", { p_provider: providerId });
+  revalidatePath(`/c/${slug}`, "layout");
+}
+
+function premiumError(message: string | undefined, fallback: string): string {
+  if (message?.includes("premium_required")) return "Este recurso faz parte do plano Destaque.";
+  if (message?.includes("sem permiss") || message?.includes("not_owner")) return "Só o dono do perfil pode fazer isso.";
+  return fallback;
+}
+
+export async function saveShowcase(slug: string, providerId: string, _: FormState, fd: FormData): Promise<FormState> {
+  const { supabase } = await requireMember(slug);
+  if (!UUID.test(providerId)) return { error: "Perfil inválido." };
+  const hours = str(fd, "hours");
+  if (hours.length > 300) return { error: "Os horários devem ter até 300 caracteres." };
+  const titles = fd.getAll("svc_title").map(String);
+  const prices = fd.getAll("svc_price").map(String);
+  const descs = fd.getAll("svc_desc").map(String);
+  const items = titles
+    .map((t, i) => ({ title: t.trim(), price: (prices[i] ?? "").trim(), description: (descs[i] ?? "").trim() }))
+    .filter((x) => x.title || x.price || x.description);
+  if (items.length > 12) return { error: "No máximo 12 serviços." };
+  for (const it of items) {
+    if (it.title.length < 2 || it.title.length > 80) return { error: "Cada serviço precisa de um nome (de 2 a 80 letras)." };
+    if (it.price.length > 40) return { error: "O preço deve ter até 40 caracteres (ex.: “a partir de R$ 50”)." };
+    if (it.description.length > 200) return { error: "A descrição de cada serviço deve ter até 200 caracteres." };
+  }
+  const { error } = await supabase.rpc("save_showcase", { p_provider: providerId, p_hours: hours || null, p_items: items });
+  if (error) {
+    console.error("saveShowcase", error);
+    return { error: premiumError(error.message, "Não foi possível salvar a vitrine.") };
+  }
+  revalidatePath(`/c/${slug}`, "layout");
+  return { ok: "Vitrine atualizada!" };
+}
+
+export async function addGalleryPhoto(slug: string, providerId: string, _: FormState, fd: FormData): Promise<FormState> {
+  const { supabase } = await requireMember(slug);
+  const url = str(fd, "gallery_url");
+  if (!UUID.test(providerId) || !url) return { error: "Escolha uma foto." };
+  const { error } = await supabase.rpc("add_provider_photo", { p_provider: providerId, p_url: url, p_caption: str(fd, "caption").slice(0, 80) || null });
+  if (error) {
+    if (error.message?.includes("max_photos")) return { error: "A galeria já tem 6 fotos. Remova uma para adicionar outra." };
+    console.error("addGalleryPhoto", error);
+    return { error: premiumError(error.message, "Não foi possível adicionar a foto.") };
+  }
+  revalidatePath(`/c/${slug}`, "layout");
+  return { ok: "Foto adicionada!" };
+}
+
+export async function removeGalleryPhoto(slug: string, photoId: string) {
+  const { supabase } = await requireMember(slug);
+  if (!UUID.test(photoId)) return;
+  await supabase.rpc("remove_provider_photo", { p_photo: photoId });
+  revalidatePath(`/c/${slug}`, "layout");
+}
+
+export async function replyToReview(slug: string, reviewId: string, _: FormState, fd: FormData): Promise<FormState> {
+  const { supabase } = await requireMember(slug);
+  if (!UUID.test(reviewId)) return { error: "Avaliação inválida." };
+  const msg = validateMessage(String(fd.get("reply") ?? ""), 500);
+  if (!msg.ok) return { error: msg.error };
+  const { error } = await supabase.rpc("reply_to_review", { p_review: reviewId, p_text: msg.text });
+  if (error) {
+    console.error("replyToReview", error);
+    return { error: premiumError(error.message, "Não foi possível publicar a resposta.") };
+  }
+  revalidatePath(`/c/${slug}`, "layout");
+  return { ok: "Resposta publicada!" };
+}
+
+export async function deleteReviewReply(slug: string, reviewId: string) {
+  const { supabase } = await requireMember(slug);
+  if (!UUID.test(reviewId)) return;
+  await supabase.rpc("delete_review_reply", { p_review: reviewId });
+  revalidatePath(`/c/${slug}`, "layout");
+}
+
+const DATE = /^\d{4}-\d{2}-\d{2}$/;
+export async function adminSaveAd(slug: string, adId: string | null, _: FormState, fd: FormData): Promise<FormState> {
+  const { condo, supabase } = await requireAdmin(slug);
+  const advertiser = str(fd, "advertiser");
+  const title = str(fd, "title");
+  const body = str(fd, "body");
+  const cta = str(fd, "cta_label") || "Saiba mais";
+  const image_url = str(fd, "image_url") || null;
+  const starts_on = str(fd, "starts_on") || null;
+  const ends_on = str(fd, "ends_on") || null;
+  if (advertiser.length < 2 || advertiser.length > 60) return { error: "Informe o nome do anunciante (até 60 letras)." };
+  if (title.length < 2 || title.length > 60) return { error: "O título deve ter de 2 a 60 letras." };
+  if (body.length > 140) return { error: "O texto deve ter até 140 caracteres." };
+  if (cta.length < 2 || cta.length > 24) return { error: "O texto do botão deve ter de 2 a 24 letras." };
+  const link = normalizeWebsite(str(fd, "link_url"));
+  if (!link.ok) return { error: "Link inválido. Use um endereço como www.loja.com.br." };
+  const rawWa = str(fd, "whatsapp");
+  const wa = rawWa ? normalizeWhatsapp(rawWa) : null;
+  if (rawWa && !wa) return { error: "WhatsApp inválido. Use o formato (11) 99999-8888." };
+  if (!link.value && !wa) return { error: "Informe um link ou um WhatsApp para o botão do anúncio." };
+  if (image_url && !image_url.includes("/ad-images/")) return { error: "Imagem inválida." };
+  if ((starts_on && !DATE.test(starts_on)) || (ends_on && !DATE.test(ends_on))) return { error: "Datas inválidas." };
+  if (starts_on && ends_on && ends_on < starts_on) return { error: "A data final deve ser depois da inicial." };
+  const row = { advertiser, title, body: body || null, cta_label: cta, link_url: link.value, whatsapp: wa, image_url, starts_on, ends_on };
+  const { error } = adId
+    ? await supabase.from("ads").update(row).eq("id", adId).eq("condo_id", condo.id)
+    : await supabase.from("ads").insert({ ...row, condo_id: condo.id, active: true });
+  if (error) {
+    console.error("adminSaveAd", error);
+    return { error: "Não foi possível salvar o anúncio." };
+  }
+  revalidatePath(`/c/${slug}`, "layout");
+  if (!adId) redirect(`/c/${slug}/admin#anuncios`);
+  return { ok: "Anúncio atualizado!" };
+}
+
+export async function adminSetAdActive(slug: string, adId: string, active: boolean) {
+  const { condo, supabase } = await requireAdmin(slug);
+  if (!UUID.test(adId)) return;
+  await supabase.from("ads").update({ active }).eq("id", adId).eq("condo_id", condo.id);
+  revalidatePath(`/c/${slug}`, "layout");
+}
+
+export async function adminDeleteAd(slug: string, adId: string) {
+  const { condo, supabase } = await requireAdmin(slug);
+  if (!UUID.test(adId)) return;
+  await supabase.from("ads").delete().eq("id", adId).eq("condo_id", condo.id);
   revalidatePath(`/c/${slug}`, "layout");
 }
