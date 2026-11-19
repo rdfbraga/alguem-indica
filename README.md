@@ -8,7 +8,8 @@ Indicações de prestadores de serviço **dentro do seu condomínio**: moradores
 
 - Login por **link no e-mail** ou **Google** (sem senha). No 1º acesso: nome, bloco/torre, unidade e aceite dos termos.
 - **Sem verificação de moradia** no MVP (decisão consciente — ver “Próximos passos”).
-- Home com **grade de categorias + busca**.
+- Home com **grade de categorias**, **busca inteligente** (sem acento, tolera erros de digitação e entende sinônimos como “bombeiro hidráulico” → Encanador) e destaques: **mais bem avaliados** e **indicações recentes**.
+- Listas com **ordenação** (melhor avaliados, mais avaliados, mais recentes) e **filtro** morador/externo. “Melhor avaliados” usa média ponderada: 1 avaliação nota 5 não passa por cima de 20 avaliações com 4,8.
 - Qualquer morador logado **indica um profissional** (morador ou externo): nome, categoria, descrição, foto, WhatsApp. Publica na hora.
 - **Detecção de duplicidade**: WhatsApp igual é bloqueado (leva ao perfil existente); nome parecido na mesma categoria, ou muitos cadastros do mesmo morador em 24h, **sinalizam** o item na fila do admin.
 - Perfil com botão **“Chamar no WhatsApp”** (`wa.me` com mensagem pronta), média e avaliações.
@@ -19,7 +20,7 @@ Indicações de prestadores de serviço **dentro do seu condomínio**: moradores
 ## Como rodar
 
 1. **Supabase**: crie um projeto em supabase.com.
-2. No **SQL Editor**, rode nesta ordem: `supabase/migrations/0001_init.sql` e depois `supabase/seed.sql` (categorias + um condomínio de exemplo, `meu-condominio`; edite slug/nome).
+2. No **SQL Editor**, rode nesta ordem: `supabase/migrations/0001_init.sql`, `0002_grants.sql`, `0003_search.sql` e depois `supabase/seed.sql` (categorias + um condomínio de exemplo, `meu-condominio`; edite slug/nome). Em um projeto já em uso, rode só as migrations que faltam.
 3. **Authentication → Providers**: e-mail já vem ativo; ative **Google** se quiser (precisa de Client ID/Secret do Google Cloud).
 4. **Authentication → URL Configuration**: em *Site URL* coloque a URL do app e em *Redirect URLs* adicione `http://localhost:3000/auth/callback` e `https://SEU-DOMINIO/auth/callback`.
 5. Copie `.env.example` para `.env.local` e preencha URL e anon key (Project Settings → API).
@@ -45,7 +46,7 @@ O link do novo condomínio é `/c/residencial-xyz`. Os dados são totalmente iso
 
 ```bash
 npm run typecheck
-npm test        # normalização de telefone
+npm test        # telefone e ordenação/filtro das listas
 ```
 A migration e as policies de RLS foram verificadas contra Postgres 16 (isolamento entre condomínios, anti-escalação de admin, duplicidade, avaliação única).
 
