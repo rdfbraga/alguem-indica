@@ -91,12 +91,12 @@ export function ProviderForm({
       <div>
         <label className="label" htmlFor="photo">Foto (opcional)</label>
         <input id="photo" type="file" accept="image/*" onChange={onPhoto} className="block w-full text-sm" />
-        {uploading && <p className="mt-1 text-sm text-stone-500">Enviando foto…</p>}
-        {photoUrl && <p className="mt-1 text-sm text-brand-700">Foto enviada ✓</p>}
+        {uploading && <p className="mt-1 text-sm text-navy/60">Enviando foto…</p>}
+        {photoUrl && <p className="mt-1 text-sm font-semibold text-green-700">Foto enviada ✓</p>}
         {photoError && <p className="mt-1 text-sm text-red-600">{photoError}</p>}
         <input type="hidden" name="photo_url" value={photoUrl} />
       </div>
-      <p className="text-xs text-stone-500">
+      <p className="text-xs text-navy/60">
         Ao indicar, você confirma que tem autorização para divulgar o contato deste profissional. Evite incluir dados pessoais além do WhatsApp.
       </p>
       {state?.error && <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{state.error}</p>}

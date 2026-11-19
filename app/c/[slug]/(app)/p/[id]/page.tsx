@@ -30,8 +30,8 @@ export default async function Prestador({
 
   return (
     <div className="space-y-4">
-      <Link href={`/c/${slug}/categoria/${p.category_slug}`} className="text-sm text-stone-500">← {p.category_name}</Link>
-      {novo && <p className="rounded-xl bg-brand-50 p-3 text-sm text-brand-700">Indicação publicada! Obrigado por ajudar os vizinhos. 🎉</p>}
+      <Link href={`/c/${slug}/categoria/${p.category_slug}`} className="text-sm text-navy/60">← {p.category_name}</Link>
+      {novo && <p className="rounded-2xl bg-green-50 p-3 text-sm font-semibold text-green-700">Indicação publicada! Obrigado por ajudar os vizinhos. 🎉</p>}
       {jaexiste && <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-800">Este profissional já estava cadastrado. Que tal avaliá-lo?</p>}
       {p.status === "hidden" && <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700">Perfil oculto (visível só para administradores).</p>}
 
@@ -45,17 +45,17 @@ export default async function Prestador({
           )}
           <div>
             <h1 className="text-xl font-bold">{p.name}</h1>
-            <div className="text-sm text-stone-500">
+            <div className="text-sm text-navy/60">
               {p.category_name} · {p.kind === "resident" ? `Morador${p.block ? ` (Bloco ${p.block})` : ""}` : "Externo indicado por morador"}
             </div>
             <div className="mt-1 flex items-center gap-1">
               {p.review_count > 0 ? (
-                <><Stars value={p.avg_rating} /><span className="text-sm text-stone-500">{Number(p.avg_rating).toFixed(1)} ({p.review_count})</span></>
-              ) : <span className="text-sm text-stone-400">Sem avaliações ainda</span>}
+                <><Stars value={p.avg_rating} /><span className="text-sm text-navy/60">{Number(p.avg_rating).toFixed(1)} ({p.review_count})</span></>
+              ) : <span className="text-sm text-navy/45">Sem avaliações ainda</span>}
             </div>
           </div>
         </div>
-        {p.description && <p className="whitespace-pre-line text-stone-700">{p.description}</p>}
+        {p.description && <p className="whitespace-pre-line text-navy/80">{p.description}</p>}
         <a href={whatsappLink(p.whatsapp, msg)} target="_blank" rel="noopener noreferrer" className="btn w-full !bg-[#25D366] hover:!bg-[#1ebe57]">
           💬 Chamar no WhatsApp · {formatWhatsapp(p.whatsapp)}
         </a>
@@ -72,14 +72,14 @@ export default async function Prestador({
               <span className="text-sm font-medium">{r.author_label}</span>
               <Stars value={r.rating} size="text-sm" />
             </div>
-            {r.comment && <p className="text-stone-700">{r.comment}</p>}
-            <div className="flex items-center justify-between text-xs text-stone-400">
+            {r.comment && <p className="text-navy/80">{r.comment}</p>}
+            <div className="flex items-center justify-between text-xs text-navy/45">
               <span>{new Date(r.created_at).toLocaleDateString("pt-BR")}</span>
               {r.author_id !== user.id && <ReportButton slug={slug} target="review" id={r.id} />}
             </div>
           </div>
         ))}
-        {reviews.length === 0 && <p className="text-sm text-stone-500">Seja o primeiro vizinho a avaliar.</p>}
+        {reviews.length === 0 && <p className="text-sm text-navy/60">Seja o primeiro vizinho a avaliar.</p>}
       </section>
       {member.role === "admin" && p.flagged && (
         <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-800">⚠️ Sinalizado: {p.flag_reason}</p>

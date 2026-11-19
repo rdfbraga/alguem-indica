@@ -9,7 +9,7 @@ export default async function Novo({ params }: { params: Promise<{ slug: string 
   const { data } = await supabase.from("categories").select("*").order("sort");
   return (
     <div className="space-y-4">
-      <Link href={`/c/${slug}`} className="text-sm text-stone-500">← Voltar</Link>
+      <Link href={`/c/${slug}`} className="text-sm text-navy/60">← Voltar</Link>
       <h1 className="text-xl font-bold">Indicar um profissional</h1>
       <ProviderForm slug={slug} categories={(data ?? []) as Category[]} userId={user.id} defaultBlock={member.block} />
     </div>

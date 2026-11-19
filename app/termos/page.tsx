@@ -3,7 +3,7 @@ export default function Termos() {
   return (
     <main className="prose mx-auto max-w-2xl space-y-3 p-6 leading-relaxed">
       <h1 className="text-2xl font-bold">Termos de uso</h1>
-      <p className="text-sm text-stone-500">Modelo inicial — revise com um advogado antes de lançar em escala.</p>
+      <p className="text-sm text-navy/60">Modelo inicial — revise com um advogado antes de lançar em escala.</p>
       <h2 className="text-lg font-semibold">1. O que é o Alguém Indica</h2>
       <p>Plataforma que reúne indicações de prestadores de serviço feitas por moradores de um mesmo condomínio. O Alguém Indica não presta nem intermedeia os serviços, não é parte da contratação e não garante a qualidade, o preço ou a idoneidade de nenhum profissional.</p>
       <h2 className="text-lg font-semibold">2. Responsabilidades do usuário</h2>

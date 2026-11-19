@@ -17,7 +17,7 @@ export default async function Cadastro({ params }: { params: Promise<{ slug: str
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-6 p-6">
       <header>
         <h1 className="text-2xl font-bold">Quase lá! 👋</h1>
-        <p className="text-stone-600">Complete seu cadastro em <b>{condo.name}</b>.</p>
+        <p className="muted">Complete seu cadastro em <b>{condo.name}</b>.</p>
       </header>
       <OnboardingForm slug={slug} defaultName={defaultName} />
     </main>

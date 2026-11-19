@@ -9,7 +9,7 @@ export function ReviewForm({ slug, providerId }: { slug: string; providerId: str
     undefined,
   );
   const [rating, setRating] = useState(0);
-  if (state?.ok) return <p className="card text-center font-medium text-brand-700">{state.ok}</p>;
+  if (state?.ok) return <p className="card text-center font-bold text-green-700">{state.ok}</p>;
   return (
     <form action={action} className="card space-y-3">
       <div className="font-semibold">Avalie este profissional</div>

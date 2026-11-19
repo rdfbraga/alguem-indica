@@ -3,7 +3,7 @@ export default function Privacidade() {
   return (
     <main className="mx-auto max-w-2xl space-y-3 p-6 leading-relaxed">
       <h1 className="text-2xl font-bold">Política de privacidade (LGPD)</h1>
-      <p className="text-sm text-stone-500">Modelo inicial — revise com um advogado antes de lançar em escala.</p>
+      <p className="text-sm text-navy/60">Modelo inicial — revise com um advogado antes de lançar em escala.</p>
       <h2 className="text-lg font-semibold">Dados que coletamos</h2>
       <ul className="list-disc pl-6">
         <li><b>Moradores:</b> e-mail (ou conta Google), nome, bloco/torre e unidade.</li>

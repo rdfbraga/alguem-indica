@@ -21,7 +21,7 @@ export function OnboardingForm({ slug, defaultName }: { slug: string; defaultNam
           <input id="unit" name="unit" required maxLength={20} className="input" placeholder="204" />
         </div>
       </div>
-      <p className="text-xs text-stone-500">
+      <p className="text-xs text-navy/60">
         Seu nome e unidade <b>não</b> ficam públicos. Nas avaliações aparece só seu primeiro nome, a inicial do sobrenome e o bloco.
       </p>
       <label className="flex items-start gap-2 text-sm">

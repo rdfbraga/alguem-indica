@@ -40,7 +40,7 @@ export default async function Admin({ params }: { params: Promise<{ slug: string
     <div className="space-y-8">
       <div>
         <h1 className="text-xl font-bold">Painel admin</h1>
-        <p className="text-sm text-stone-500">{members ?? 0} moradores · {(recent ?? []).length}+ prestadores recentes</p>
+        <p className="text-sm text-navy/60">{members ?? 0} moradores · {(recent ?? []).length}+ prestadores recentes</p>
       </div>
 
       <section className="space-y-3">
@@ -48,7 +48,7 @@ export default async function Admin({ params }: { params: Promise<{ slug: string
         {((flagged ?? []) as ProviderRow[]).map((p) => (
           <div key={p.id} className="card space-y-2">
             <Link href={`/c/${slug}/p/${p.id}`} className="font-semibold underline">{p.name}</Link>
-            <span className="text-sm text-stone-500"> · {p.category_name}{p.status === "hidden" ? " · OCULTO" : ""}</span>
+            <span className="text-sm text-navy/60"> · {p.category_name}{p.status === "hidden" ? " · OCULTO" : ""}</span>
             <p className="text-sm text-amber-800">{p.flag_reason}</p>
             <div className="flex gap-2">
               <form action={adminClearFlag.bind(null, slug, p.id)}><button className="btn-secondary !px-3 !py-2 !text-sm">Está ok</button></form>
@@ -58,7 +58,7 @@ export default async function Admin({ params }: { params: Promise<{ slug: string
             </div>
           </div>
         ))}
-        {(flagged ?? []).length === 0 && <p className="text-sm text-stone-500">Nada pendente. 🎉</p>}
+        {(flagged ?? []).length === 0 && <p className="text-sm text-navy/60">Nada pendente. 🎉</p>}
       </section>
 
       <section className="space-y-3">
@@ -68,7 +68,7 @@ export default async function Admin({ params }: { params: Promise<{ slug: string
           const rev = r.review_id ? rMap.get(r.review_id) : null;
           return (
             <div key={r.id} className="card space-y-2">
-              <p className="text-sm text-stone-500">{new Date(r.created_at).toLocaleString("pt-BR")}</p>
+              <p className="text-sm text-navy/60">{new Date(r.created_at).toLocaleString("pt-BR")}</p>
               <p><b>Motivo:</b> {r.reason}</p>
               {prov && <p className="text-sm">Prestador: <Link className="underline" href={`/c/${slug}/p/${r.provider_id}`}>{prov.name as string}</Link></p>}
               {rev && <p className="text-sm">Avaliação de {rev.author_label}: “{rev.comment || "(sem texto)"}”</p>}
@@ -84,7 +84,7 @@ export default async function Admin({ params }: { params: Promise<{ slug: string
             </div>
           );
         })}
-        {reports.length === 0 && <p className="text-sm text-stone-500">Sem denúncias abertas.</p>}
+        {reports.length === 0 && <p className="text-sm text-navy/60">Sem denúncias abertas.</p>}
       </section>
 
       <section className="space-y-3">
@@ -93,7 +93,7 @@ export default async function Admin({ params }: { params: Promise<{ slug: string
           <div key={p.id} className="card flex items-center justify-between gap-2">
             <div className="min-w-0">
               <Link href={`/c/${slug}/p/${p.id}`} className="block truncate font-medium underline">{p.name}</Link>
-              <span className="text-xs text-stone-500">{p.category_name} · {p.review_count} aval. {p.status === "hidden" ? "· OCULTO" : ""}</span>
+              <span className="text-xs text-navy/60">{p.category_name} · {p.review_count} aval. {p.status === "hidden" ? "· OCULTO" : ""}</span>
             </div>
             <form action={adminSetProviderStatus.bind(null, slug, p.id, p.status === "hidden" ? "active" : "hidden")}>
               <button className="btn-secondary !px-3 !py-2 !text-sm">{p.status === "hidden" ? "Reexibir" : "Ocultar"}</button>

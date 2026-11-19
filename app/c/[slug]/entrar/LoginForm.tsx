@@ -38,7 +38,7 @@ export function LoginForm({ slug }: { slug: string }) {
       <div className="card text-center">
         <div className="text-4xl">📬</div>
         <p className="mt-2 font-semibold">Confira seu e-mail</p>
-        <p className="mt-1 text-sm text-stone-600">
+        <p className="mt-1 text-sm text-navy/70">
           Enviamos um link para <b>{email}</b>. Abra-o <b>neste mesmo aparelho</b> para entrar.
         </p>
       </div>
@@ -55,8 +55,8 @@ export function LoginForm({ slug }: { slug: string }) {
         </svg>
         Entrar com Google
       </button>
-      <div className="flex items-center gap-3 text-xs text-stone-400">
-        <div className="h-px flex-1 bg-stone-200" /> ou <div className="h-px flex-1 bg-stone-200" />
+      <div className="flex items-center gap-3 text-xs text-navy/45">
+        <div className="h-px flex-1 bg-navy/10" /> ou <div className="h-px flex-1 bg-navy/10" />
       </div>
       <form onSubmit={sendLink} className="space-y-3">
         <div>

@@ -21,11 +21,11 @@ export default async function Categoria({ params }: { params: Promise<{ slug: st
   const c = category as Category;
   return (
     <div className="space-y-3">
-      <Link href={`/c/${slug}`} className="text-sm text-stone-500">← Categorias</Link>
+      <Link href={`/c/${slug}`} className="text-sm text-navy/60">← Categorias</Link>
       <h1 className="text-xl font-bold">{c.icon} {c.name}</h1>
       {providers.map((p) => <ProviderCard key={p.id} slug={slug} p={p} />)}
       {providers.length === 0 && (
-        <div className="card text-center text-stone-600">
+        <div className="card text-center text-navy/70">
           Ainda não há indicações aqui.{" "}
           <Link href={`/c/${slug}/novo`} className="font-semibold text-brand-700 underline">Seja o primeiro a indicar</Link>.
         </div>

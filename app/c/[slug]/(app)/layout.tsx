@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requireMember } from "@/lib/condo";
+import { Logo } from "@/components/Logo";
 import { signOut } from "../actions";
 
 export default async function AppLayout({
@@ -13,17 +14,17 @@ export default async function AppLayout({
   const { condo, member } = await requireMember(slug);
   return (
     <div className="mx-auto min-h-screen max-w-2xl pb-24">
-      <header className="sticky top-0 z-10 flex items-center justify-between border-b border-stone-200 bg-white/90 px-4 py-3 backdrop-blur">
-        <Link href={`/c/${slug}`} className="leading-tight">
-          <div className="text-lg font-bold text-brand-700">Alguém Indica</div>
-          <div className="text-xs text-stone-500">{condo.name}</div>
-        </Link>
+      <header className="sticky top-0 z-10 flex items-center justify-between border-b border-orange-100 bg-white/90 px-4 py-3 backdrop-blur">
+        <div className="min-w-0">
+          <Logo href={`/c/${slug}`} />
+          <div className="mt-0.5 truncate pl-[3.1rem] text-xs font-semibold text-sky-brand">{condo.name}</div>
+        </div>
         <div className="flex items-center gap-3 text-sm">
           {member.role === "admin" && (
-            <Link href={`/c/${slug}/admin`} className="rounded-lg bg-amber-100 px-2 py-1 font-medium text-amber-800">Admin</Link>
+            <Link href={`/c/${slug}/admin`} className="rounded-xl bg-sky-soft px-2.5 py-1 font-bold text-sky-brand">Admin</Link>
           )}
           <form action={signOut.bind(null, slug)}>
-            <button className="text-stone-500 hover:text-stone-800">Sair</button>
+            <button className="font-semibold text-navy/60 hover:text-navy">Sair</button>
           </form>
         </div>
       </header>
