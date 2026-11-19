@@ -1,4 +1,4 @@
--- Indikaí — schema inicial (multi-condomínio, com RLS)
+-- Alguém Indica — schema inicial (multi-condomínio, com RLS)
 create extension if not exists pg_trgm;
 
 -- ───────────── Tabelas ─────────────

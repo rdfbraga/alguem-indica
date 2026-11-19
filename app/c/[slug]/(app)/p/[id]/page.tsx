@@ -26,7 +26,7 @@ export default async function Prestador({
     .from("reviews").select("*").eq("provider_id", id).eq("status", "visible").order("created_at", { ascending: false });
   const reviews = (rs ?? []) as ReviewRow[];
   const mine = reviews.some((r) => r.author_id === user.id);
-  const msg = `Olá, ${p.name}! Vi seu perfil no Indikaí (${condo.name}). Pode me ajudar?`;
+  const msg = `Olá, ${p.name}! Vi seu perfil no Alguém Indica (${condo.name}). Pode me ajudar?`;
 
   return (
     <div className="space-y-4">

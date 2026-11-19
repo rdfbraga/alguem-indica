@@ -17,7 +17,7 @@ export default async function Entrar({
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-6 p-6">
       <header className="text-center">
         <div className="text-4xl">🏢</div>
-        <h1 className="mt-2 text-2xl font-bold text-brand-700">Indikaí</h1>
+        <h1 className="mt-2 text-2xl font-bold text-brand-700">Alguém Indica</h1>
         <p className="text-stone-600">Indicações de confiança de <b>{condo.name}</b></p>
       </header>
       {erro && <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700">O link expirou ou foi aberto em outro aparelho. Peça um novo.</p>}

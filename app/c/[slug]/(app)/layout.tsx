@@ -15,7 +15,7 @@ export default async function AppLayout({
     <div className="mx-auto min-h-screen max-w-2xl pb-24">
       <header className="sticky top-0 z-10 flex items-center justify-between border-b border-stone-200 bg-white/90 px-4 py-3 backdrop-blur">
         <Link href={`/c/${slug}`} className="leading-tight">
-          <div className="text-lg font-bold text-brand-700">Indikaí</div>
+          <div className="text-lg font-bold text-brand-700">Alguém Indica</div>
           <div className="text-xs text-stone-500">{condo.name}</div>
         </Link>
         <div className="flex items-center gap-3 text-sm">

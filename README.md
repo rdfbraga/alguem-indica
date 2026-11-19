@@ -1,4 +1,4 @@
-# Indikaí 🏢
+# Alguém Indica 🏢
 
 Indicações de prestadores de serviço **dentro do seu condomínio**: moradores cadastram e avaliam profissionais, e os vizinhos chamam no WhatsApp com um toque. Multi-condomínio desde o dia 1 (um link por condomínio).
 
@@ -52,7 +52,7 @@ A migration e as policies de RLS foram verificadas contra Postgres 16 (isolament
 ## Próximos passos sugeridos
 
 - **Verificação leve**: código de acesso por condomínio (ou convite por vizinho) — o schema já permite adicionar uma coluna em `condominiums`.
-- Subdomínio por condomínio (`xyz.indikai.com.br`) em vez de `/c/<slug>`.
+- Subdomínio por condomínio (`xyz.alguemindica.com.br`) em vez de `/c/<slug>`.
 - Assumir perfil pelo prestador (código no WhatsApp) → assinatura/selo “Recomendado”.
 - Editar/excluir a própria indicação e a própria conta (LGPD).
 - Avisos por e-mail ao admin; banners de comércios locais; agendamento.
