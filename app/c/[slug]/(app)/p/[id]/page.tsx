@@ -4,6 +4,7 @@ import { requireMember } from "@/lib/condo";
 import { formatWhatsapp, whatsappLink } from "@/lib/phone";
 import type { ProviderRow, ReviewRow } from "@/lib/types";
 import { Stars } from "@/components/Stars";
+import { displayCategory } from "@/lib/suggestions";
 import { ReportButton } from "@/components/ReportButton";
 import { ReviewForm } from "./ReviewForm";
 
@@ -46,7 +47,7 @@ export default async function Prestador({
           <div>
             <h1 className="text-xl font-bold">{p.name}</h1>
             <div className="text-sm text-navy/60">
-              {p.category_name} · {p.kind === "resident" ? `Morador${p.block ? ` (Bloco ${p.block})` : ""}` : "Externo indicado por morador"}
+              {displayCategory(p)} · {p.kind === "resident" ? `Morador${p.block ? ` (Bloco ${p.block})` : ""}` : "Externo indicado por morador"}
             </div>
             <div className="mt-1 flex items-center gap-1">
               {p.review_count > 0 ? (

@@ -38,6 +38,7 @@ export async function createProvider(slug: string, _: FormState, fd: FormData): 
   const category_id = Number(fd.get("category_id"));
   const kind = str(fd, "kind");
   const photo_url = str(fd, "photo_url") || null;
+  const custom = str(fd, "custom_category").replace(/\s+/g, " ");
   const whatsapp = normalizeWhatsapp(str(fd, "whatsapp"));
   if (name.length < 2) return { error: "Informe o nome do prestador." };
   if (!Number.isInteger(category_id) || category_id <= 0) return { error: "Escolha uma categoria." };
@@ -46,10 +47,18 @@ export async function createProvider(slug: string, _: FormState, fd: FormData): 
   if (description.length > 500) return { error: "A descrição deve ter até 500 caracteres." };
   if (photo_url && !photo_url.includes("/provider-photos/")) return { error: "Foto inválida." };
 
+  const { data: cat } = await supabase.from("categories").select("slug").eq("id", category_id).maybeSingle();
+  if (!cat) return { error: "Categoria inválida." };
+  const isOther = cat.slug === "outros";
+  if (isOther && (custom.length < 2 || custom.length > 40)) {
+    return { error: "Diga qual é a categoria (de 2 a 40 letras). Ex.: Dedetização." };
+  }
+  const custom_category = isOther ? custom : null;
+
   const block = kind === "resident" ? str(fd, "block") || member.block : null;
   const { data, error } = await supabase
     .from("providers")
-    .insert({ condo_id: condo.id, category_id, created_by: user.id, name, description, whatsapp, photo_url, kind, block })
+    .insert({ condo_id: condo.id, category_id, created_by: user.id, name, description, whatsapp, photo_url, kind, block, ...(custom_category ? { custom_category } : {}) })
     .select("id")
     .single();
   if (error) {
@@ -129,5 +138,45 @@ export async function adminSetReviewStatus(slug: string, id: string, status: "vi
 export async function adminResolveReport(slug: string, id: string) {
   const { condo, supabase } = await requireAdmin(slug);
   await supabase.from("reports").update({ status: "resolved" }).eq("id", id).eq("condo_id", condo.id);
+  revalidatePath(`/c/${slug}`, "layout");
+}
+
+// ─── Sugestões de categoria (admin) ───
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const idsFrom = (fd: FormData) =>
+  String(fd.get("ids") ?? "").split(",").map((s) => s.trim()).filter((s) => UUID.test(s));
+
+export async function adminCreateCategory(slug: string, fd: FormData) {
+  const { condo, supabase } = await requireAdmin(slug);
+  const ids = idsFrom(fd);
+  if (!ids.length) return;
+  await supabase.rpc("approve_category", {
+    p_condo: condo.id,
+    p_name: str(fd, "name"),
+    p_icon: str(fd, "icon"),
+    p_provider_ids: ids,
+  });
+  revalidatePath(`/c/${slug}`, "layout");
+}
+
+export async function adminMoveToCategory(slug: string, fd: FormData) {
+  const { condo, supabase } = await requireAdmin(slug);
+  const ids = idsFrom(fd);
+  const category_id = Number(fd.get("category_id"));
+  if (!ids.length || !Number.isInteger(category_id) || category_id <= 0) return;
+  await supabase
+    .from("providers")
+    .update({ category_id, custom_category: null, custom_category_reviewed: false })
+    .in("id", ids)
+    .eq("condo_id", condo.id);
+  revalidatePath(`/c/${slug}`, "layout");
+}
+
+/** Mantém em "Outros": tira da fila, mas o rótulo digitado continua aparecendo no perfil e na busca. */
+export async function adminDismissSuggestion(slug: string, fd: FormData) {
+  const { condo, supabase } = await requireAdmin(slug);
+  const ids = idsFrom(fd);
+  if (!ids.length) return;
+  await supabase.from("providers").update({ custom_category_reviewed: true }).in("id", ids).eq("condo_id", condo.id);
   revalidatePath(`/c/${slug}`, "layout");
 }

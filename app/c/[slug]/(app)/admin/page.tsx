@@ -1,8 +1,12 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/condo";
-import type { ProviderRow, ReviewRow } from "@/lib/types";
+import type { Category, ProviderRow, ReviewRow } from "@/lib/types";
+import { capitalizeFirst, groupSuggestions } from "@/lib/suggestions";
 import {
   adminClearFlag,
+  adminCreateCategory,
+  adminDismissSuggestion,
+  adminMoveToCategory,
   adminResolveReport,
   adminSetProviderStatus,
   adminSetReviewStatus,
@@ -26,6 +30,14 @@ export default async function Admin({ params }: { params: Promise<{ slug: string
     supabase.from("provider_listing").select("*").eq("condo_id", condo.id).order("created_at", { ascending: false }).limit(30),
     supabase.from("members").select("*", { count: "exact", head: true }).eq("condo_id", condo.id),
   ]);
+  const [{ data: pendingData }, { data: catData }] = await Promise.all([
+    supabase.from("providers").select("id,name,custom_category")
+      .eq("condo_id", condo.id).not("custom_category", "is", null).eq("custom_category_reviewed", false)
+      .order("created_at", { ascending: false }),
+    supabase.from("categories").select("id,slug,name,icon").order("sort"),
+  ]);
+  const suggestions = groupSuggestions((pendingData ?? []) as { id: string; name: string; custom_category: string | null }[]);
+  const moveTargets = ((catData ?? []) as Category[]).filter((c) => c.slug !== "outros");
   const reports = (reportsData ?? []) as Report[];
   const provIds = reports.map((r) => r.provider_id).filter(Boolean) as string[];
   const revIds = reports.map((r) => r.review_id).filter(Boolean) as string[];
@@ -42,6 +54,51 @@ export default async function Admin({ params }: { params: Promise<{ slug: string
         <h1 className="text-xl font-bold">Painel admin</h1>
         <p className="text-sm text-navy/60">{members ?? 0} moradores · {(recent ?? []).length}+ prestadores recentes</p>
       </div>
+
+      <section className="space-y-3">
+        <h2 className="font-semibold">🏷️ Categorias sugeridas ({suggestions.length})</h2>
+        {suggestions.map((g) => {
+          const ids = g.items.map((i) => i.id).join(",");
+          return (
+            <div key={g.key} className="card space-y-3">
+              <div>
+                <div className="text-lg font-extrabold">{g.label}</div>
+                <p className="text-sm text-navy/60">
+                  {g.items.length} indicação(ões):{" "}
+                  {g.items.map((i, k) => (
+                    <span key={i.id}>{k > 0 && ", "}<Link className="underline" href={`/c/${slug}/p/${i.id}`}>{i.name}</Link></span>
+                  ))}
+                </p>
+              </div>
+              <form action={adminCreateCategory.bind(null, slug)} className="flex flex-wrap items-end gap-2">
+                <input type="hidden" name="ids" value={ids} />
+                <div className="w-16">
+                  <label className="label !text-xs">Ícone</label>
+                  <input name="icon" defaultValue="✨" maxLength={8} className="input !px-2 !py-2 text-center" />
+                </div>
+                <div className="min-w-40 flex-1">
+                  <label className="label !text-xs">Nome da nova categoria</label>
+                  <input name="name" required minLength={2} maxLength={40} defaultValue={capitalizeFirst(g.label)} className="input !py-2" />
+                </div>
+                <button className="btn !px-3 !py-2 !text-sm">Criar e mover</button>
+              </form>
+              <form action={adminMoveToCategory.bind(null, slug)} className="flex flex-wrap items-center gap-2">
+                <input type="hidden" name="ids" value={ids} />
+                <select name="category_id" required defaultValue="" className="input min-w-40 flex-1 !py-2">
+                  <option value="" disabled>Mover para categoria existente…</option>
+                  {moveTargets.map((c) => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
+                </select>
+                <button className="btn-secondary !px-3 !py-2 !text-sm">Mover</button>
+              </form>
+              <form action={adminDismissSuggestion.bind(null, slug)}>
+                <input type="hidden" name="ids" value={ids} />
+                <button className="text-sm font-semibold text-navy/60 underline">Manter em “Outros” (tirar da fila)</button>
+              </form>
+            </div>
+          );
+        })}
+        {suggestions.length === 0 && <p className="text-sm text-navy/60">Nenhuma sugestão pendente.</p>}
+      </section>
 
       <section className="space-y-3">
         <h2 className="font-semibold">⚠️ Possíveis duplicidades / inconsistências ({(flagged ?? []).length})</h2>

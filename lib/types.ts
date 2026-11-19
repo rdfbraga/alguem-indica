@@ -17,6 +17,8 @@ export type ProviderRow = {
   photo_url: string | null;
   kind: "resident" | "external";
   block: string | null;
+  custom_category: string | null;
+  custom_category_reviewed: boolean;
   status: "active" | "hidden";
   flagged: boolean;
   flag_reason: string | null;

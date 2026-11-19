@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ProviderRow } from "@/lib/types";
 import { Stars } from "./Stars";
+import { displayCategory } from "@/lib/suggestions";
 
 export function ProviderCard({ slug, p }: { slug: string; p: ProviderRow }) {
   return (
@@ -16,7 +17,7 @@ export function ProviderCard({ slug, p }: { slug: string; p: ProviderRow }) {
       <div className="min-w-0 flex-1">
         <div className="truncate font-extrabold">{p.name}</div>
         <div className="truncate text-sm text-navy/60">
-          {p.category_name}
+          {displayCategory(p)}
           {p.kind === "resident" ? ` · Morador${p.block ? ` (Bloco ${p.block})` : ""}` : " · Externo indicado"}
         </div>
         <div className="mt-0.5 flex items-center gap-1 text-sm">

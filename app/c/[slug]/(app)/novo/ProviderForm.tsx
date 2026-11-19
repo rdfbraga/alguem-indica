@@ -27,9 +27,12 @@ export function ProviderForm({
 }) {
   const [state, action, pending] = useActionState<FormState, FormData>(createProvider.bind(null, slug), undefined);
   const [kind, setKind] = useState<"resident" | "external">("external");
+  const [categoryId, setCategoryId] = useState("");
   const [photoUrl, setPhotoUrl] = useState("");
   const [uploading, setUploading] = useState(false);
   const [photoError, setPhotoError] = useState("");
+
+  const isOther = categories.find((c) => String(c.id) === categoryId)?.slug === "outros";
 
   async function onPhoto(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -58,11 +61,18 @@ export function ProviderForm({
       </div>
       <div>
         <label className="label" htmlFor="category_id">Categoria</label>
-        <select id="category_id" name="category_id" required defaultValue="" className="input">
+        <select id="category_id" name="category_id" required value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className="input">
           <option value="" disabled>Escolha…</option>
           {categories.map((c) => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
         </select>
       </div>
+      {isOther && (
+        <div>
+          <label className="label" htmlFor="custom_category">Qual categoria?</label>
+          <input id="custom_category" name="custom_category" required minLength={2} maxLength={40} className="input" placeholder="Ex.: Dedetização, Fotógrafo, Costureira…" />
+          <p className="mt-1 text-xs text-navy/60">A indicação já fica publicada em “Outros”. Se várias pessoas pedirem, a administração pode criar uma categoria própria.</p>
+        </div>
+      )}
       <div>
         <span className="label">Quem é?</span>
         <div className="grid grid-cols-2 gap-2">
