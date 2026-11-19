@@ -2,6 +2,22 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
+/** Traduz o erro do Supabase para algo útil (e mostra o código para facilitar o suporte). */
+function otpErrorMessage(error: { status?: number; code?: string; message?: string }): string {
+  const code = error.code ?? "";
+  const ref = ` (${[error.status, code].filter(Boolean).join(" · ") || "erro"})`;
+  if (error.status === 429 || code.includes("rate_limit")) {
+    return "Muitos pedidos de link em pouco tempo. Aguarde alguns minutos e tente de novo." + ref;
+  }
+  if (code === "email_address_invalid" || code === "validation_failed") {
+    return "Esse e-mail parece inválido. Confira e tente de novo." + ref;
+  }
+  if (error.status === 500 || code === "unexpected_failure" || /sending .*email/i.test(error.message ?? "")) {
+    return "Não conseguimos enviar o e-mail agora. Tente de novo em instantes ou entre com o Google." + ref;
+  }
+  return "Não foi possível enviar o link. Confira o e-mail e tente de novo." + ref;
+}
+
 export function LoginForm({ slug }: { slug: string }) {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
@@ -17,8 +33,9 @@ export function LoginForm({ slug }: { slug: string }) {
       options: { emailRedirectTo: redirectTo() },
     });
     if (error) {
+      console.error("signInWithOtp", error);
       setStatus("error");
-      setMessage("Não foi possível enviar o link. Confira o e-mail e tente de novo.");
+      setMessage(otpErrorMessage(error));
     } else setStatus("sent");
   }
 
