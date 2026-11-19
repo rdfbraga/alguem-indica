@@ -154,6 +154,7 @@ export async function adminCreateCategory(slug: string, fd: FormData) {
     p_condo: condo.id,
     p_name: str(fd, "name"),
     p_icon: str(fd, "icon"),
+    p_group_id: Number(fd.get("group_id")),
     p_provider_ids: ids,
   });
   revalidatePath(`/c/${slug}`, "layout");

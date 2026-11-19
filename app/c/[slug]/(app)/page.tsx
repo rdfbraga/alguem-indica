@@ -1,12 +1,11 @@
 import Link from "next/link";
 import { requireMember } from "@/lib/condo";
-import type { Category, ProviderRow } from "@/lib/types";
+import type { Category, CategoryGroup, ProviderRow } from "@/lib/types";
+import { groupCategories } from "@/lib/groups";
 import { filterKind, parseKind, parseOrder, sortProviders } from "@/lib/listing";
 import { ProviderCard } from "@/components/ProviderCard";
 import { ListControls } from "@/components/ListControls";
 import { SearchBox } from "@/components/SearchBox";
-
-const VISIBLE_CATEGORIES = 9; // 3 linhas de 3
 
 function CategoryTile({ slug, c }: { slug: string; c: Category }) {
   return (
@@ -34,8 +33,12 @@ export default async function Home({
   const { condo, member, supabase } = await requireMember(slug);
   const firstName = member.full_name.split(" ")[0];
 
-  const { data: catData } = await supabase.from("categories").select("id,slug,name,icon").order("sort");
+  const [{ data: catData }, { data: groupData }] = await Promise.all([
+    supabase.from("categories").select("*").order("sort"),
+    supabase.from("category_groups").select("id,slug,name,icon").order("sort"),
+  ]);
   const categories = (catData ?? []) as Category[];
+  const sections = groupCategories((groupData ?? []) as CategoryGroup[], categories);
   const suggestions = categories.filter((c) => c.slug !== "outros").map((c) => c.name.split(" / ")[0]);
 
   if (q) {
@@ -96,20 +99,21 @@ export default async function Home({
 
       <section>
         <h2 className="mb-3 text-lg font-extrabold">O que você procura?</h2>
-        <div className="grid grid-cols-3 gap-2">
-          {categories.slice(0, VISIBLE_CATEGORIES).map((c) => <CategoryTile key={c.id} slug={slug} c={c} />)}
+        <div className="space-y-2">
+          {sections.map((sec, i) => (
+            <details key={sec.group.id} name="grupos-categorias" open={i === 0} className="group card !rounded-2xl !p-0 open:border-brand-500/40">
+              <summary className="flex cursor-pointer list-none items-center gap-3 px-3 py-2.5 [&::-webkit-details-marker]:hidden">
+                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-50 text-xl">{sec.group.icon}</span>
+                <span className="flex-1 font-extrabold">{sec.group.name}</span>
+                <span className="text-xs font-semibold text-navy/50">{sec.categories.length}</span>
+                <span className="text-navy/40 transition group-open:rotate-90" aria-hidden>›</span>
+              </summary>
+              <div className="grid grid-cols-3 gap-2 px-3 pb-3">
+                {sec.categories.map((c) => <CategoryTile key={c.id} slug={slug} c={c} />)}
+              </div>
+            </details>
+          ))}
         </div>
-        {categories.length > VISIBLE_CATEGORIES && (
-          <details className="group mt-2">
-            <summary className="mx-auto w-fit cursor-pointer list-none rounded-full border-2 border-navy/15 bg-white px-4 py-1.5 text-sm font-bold text-navy transition hover:border-sky-brand/50 [&::-webkit-details-marker]:hidden">
-              <span className="group-open:hidden">Ver todas as categorias (+{categories.length - VISIBLE_CATEGORIES})</span>
-              <span className="hidden group-open:inline">Mostrar menos</span>
-            </summary>
-            <div className="mt-2 grid grid-cols-3 gap-2">
-              {categories.slice(VISIBLE_CATEGORIES).map((c) => <CategoryTile key={c.id} slug={slug} c={c} />)}
-            </div>
-          </details>
-        )}
       </section>
 
       {topRated.length > 0 && (

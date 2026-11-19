@@ -3,6 +3,7 @@ import { useActionState, useState } from "react";
 import { createProvider } from "../../actions";
 import { createClient } from "@/lib/supabase/client";
 import type { Category, FormState } from "@/lib/types";
+import type { GroupLike, Section } from "@/lib/groups";
 
 async function resizeImage(file: File, max = 800): Promise<Blob> {
   const bmp = await createImageBitmap(file);
@@ -16,12 +17,12 @@ async function resizeImage(file: File, max = 800): Promise<Blob> {
 
 export function ProviderForm({
   slug,
-  categories,
+  sections,
   userId,
   defaultBlock,
 }: {
   slug: string;
-  categories: Category[];
+  sections: Section<GroupLike, Category>[];
   userId: string;
   defaultBlock: string;
 }) {
@@ -32,7 +33,7 @@ export function ProviderForm({
   const [uploading, setUploading] = useState(false);
   const [photoError, setPhotoError] = useState("");
 
-  const isOther = categories.find((c) => String(c.id) === categoryId)?.slug === "outros";
+  const isOther = sections.flatMap((s) => s.categories).find((c) => String(c.id) === categoryId)?.slug === "outros";
 
   async function onPhoto(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -63,7 +64,11 @@ export function ProviderForm({
         <label className="label" htmlFor="category_id">Categoria</label>
         <select id="category_id" name="category_id" required value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className="input">
           <option value="" disabled>Escolha…</option>
-          {categories.map((c) => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
+          {sections.map((sec) => (
+            <optgroup key={sec.group.id} label={`${sec.group.icon} ${sec.group.name}`}>
+              {sec.categories.map((c) => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
+            </optgroup>
+          ))}
         </select>
       </div>
       {isOther && (

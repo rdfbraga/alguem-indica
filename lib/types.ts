@@ -7,7 +7,8 @@ export type Member = {
   unit: string;
   role: "resident" | "admin";
 };
-export type Category = { id: number; slug: string; name: string; icon: string };
+export type Category = { id: number; slug: string; name: string; icon: string; group_id: number | null };
+export type CategoryGroup = { id: number; slug: string; name: string; icon: string };
 export type ProviderRow = {
   id: string;
   condo_id: string;
