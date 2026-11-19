@@ -5,7 +5,11 @@ import type { Condo, Member } from "@/lib/types";
 
 export const getCondo = cache(async (slug: string): Promise<Condo> => {
   const supabase = await createClient();
-  const { data } = await supabase.rpc("condo_by_slug", { s: slug });
+  const { data, error } = await supabase.rpc("condo_by_slug", { s: slug });
+  if (error) {
+    // Erro de configuração/permissão: não esconder atrás de um 404.
+    throw new Error(`Falha ao consultar o condomínio (${error.code ?? "?"}): ${error.message}`);
+  }
   const condo = (data as Condo[] | null)?.[0];
   if (!condo) notFound();
   return condo;
