@@ -9,11 +9,12 @@ export default function Privacidade() {
         <li><b>Moradores:</b> e-mail (ou conta Google), nome, bloco/torre e unidade.</li>
         <li><b>Prestadores indicados:</b> nome, categoria, descrição, foto (opcional) e número de WhatsApp, informados por um morador.</li>
         <li><b>Avaliações e denúncias</b> feitas na plataforma.</li>
+        <li><b>Uso do app:</b> visitas a perfis e cliques em “Chamar no WhatsApp”, Instagram e site. Servem para gerar relatórios de resultados aos prestadores e à administração.</li>
       </ul>
       <h2 className="text-lg font-semibold">Para que usamos</h2>
       <p>Para autenticar você, mostrar indicações aos vizinhos do mesmo condomínio, evitar avaliações falsas e moderar conteúdo. Não vendemos seus dados.</p>
       <h2 className="text-lg font-semibold">O que os vizinhos veem</h2>
-      <p>Em avaliações aparecem apenas seu primeiro nome, a inicial do sobrenome e o bloco (ex.: “Maria S. · Bloco B”). Seu e-mail e sua unidade não são exibidos. Os dados de prestadores (nome, WhatsApp, descrição) ficam visíveis apenas a moradores cadastrados no mesmo condomínio.</p>
+      <p>Os relatórios mostram apenas totais (ex.: “12 pessoas viram seu perfil”); o prestador nunca vê quem foi. Em avaliações aparecem apenas seu primeiro nome, a inicial do sobrenome e o bloco (ex.: “Maria S. · Bloco B”). Seu e-mail e sua unidade não são exibidos. Os dados de prestadores (nome, WhatsApp, descrição) ficam visíveis apenas a moradores cadastrados no mesmo condomínio.</p>
       <h2 className="text-lg font-semibold">Seus direitos</h2>
       <p>Você pode solicitar acesso, correção ou exclusão dos seus dados, e prestadores podem pedir a remoção do seu perfil, entrando em contato com a administração do Alguém Indica.</p>
       <h2 className="text-lg font-semibold">Terceiros</h2>

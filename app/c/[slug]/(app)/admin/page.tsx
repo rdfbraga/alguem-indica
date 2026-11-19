@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireAdmin } from "@/lib/condo";
 import type { Category, CategoryGroup, FeedbackRow, ProfileClaimRow, ProviderRow, ReviewRow } from "@/lib/types";
 import { formatWhatsapp } from "@/lib/phone";
+import { StatTile } from "@/components/StatTile";
 import { KIND_BY_VALUE } from "@/lib/feedback";
 import { groupCategories } from "@/lib/groups";
 import { capitalizeFirst, findSimilarCategories, groupSuggestions } from "@/lib/suggestions";
@@ -45,6 +46,10 @@ export default async function Admin({ params }: { params: Promise<{ slug: string
   ]);
   const groups = (groupData ?? []) as CategoryGroup[];
 
+  type CondoStats = { days: number; totals: { views: number; viewers: number; whatsapp: number; members: number; owners: number; providers: number }; top: { id: string; name: string; whatsapp: number; views: number }[] };
+  const { data: cs } = await supabase.rpc("condo_stats", { p_condo: condo.id, p_days: 30 });
+  const overview = (cs ?? null) as CondoStats | null;
+
   const { data: fbData } = await supabase
     .from("feedback").select("*").eq("condo_id", condo.id)
     .order("created_at", { ascending: false }).limit(60);
@@ -87,6 +92,31 @@ export default async function Admin({ params }: { params: Promise<{ slug: string
         <h1 className="text-xl font-bold">Painel admin</h1>
         <p className="text-sm text-navy/60">{members ?? 0} moradores · {(recent ?? []).length}+ prestadores recentes</p>
       </div>
+
+      {overview && (
+        <section className="space-y-3">
+          <h2 className="font-semibold">📈 Visão geral do condomínio (últimos {overview.days} dias)</h2>
+          <div className="grid grid-cols-2 gap-3">
+            <StatTile label="Moradores que visitaram perfis" value={overview.totals.viewers} hint={`de ${overview.totals.members} cadastrados`} />
+            <StatTile label="Visitas a perfis" value={overview.totals.views} />
+            <StatTile label="Cliques no WhatsApp" value={overview.totals.whatsapp} />
+            <StatTile label="Perfis com dono" value={overview.totals.owners} hint={`de ${overview.totals.providers} ativos`} />
+          </div>
+          {overview.top.length > 0 && (
+            <div className="card !p-3 text-sm">
+              <div className="mb-2 font-bold">Perfis com mais cliques no WhatsApp</div>
+              <ol className="space-y-1">
+                {overview.top.map((t, i) => (
+                  <li key={t.id} className="flex items-center justify-between gap-2">
+                    <span className="min-w-0 truncate">{i + 1}. <Link className="underline" href={`/c/${slug}/resultados?perfil=${t.id}`}>{t.name}</Link></span>
+                    <span className="shrink-0 tabular-nums text-navy/70">{t.whatsapp} cliques · {t.views} visitas</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
+        </section>
+      )}
 
       <section className="space-y-3">
         <h2 className="font-semibold">🙋 Pedidos para assumir perfil ({claims.length})</h2>

@@ -1,7 +1,7 @@
 -- ============================================================================
 -- DADOS DE TESTE do Alguém indica? — rode no SQL Editor do Supabase.
 --  * Cria ~170 prestadores (3 a 4 por categoria, nas ~50 categorias) e 15 vizinhos FICTÍCIOS que avaliam.
---  * Requer as migrations 0004, 0005 e 0007 (categorias novas e várias categorias por perfil). Alguns ficam em "Outros" com categoria sugerida.
+--  * Requer as migrations 0004, 0005 e 0007 (categorias novas e várias categorias por perfil); com a 0009 também cria visitas, cliques, Instagram e site. Alguns ficam em "Outros" com categoria sugerida.
 --  * Usa o condomínio mais antigo cadastrado (troque v_slug para escolher outro).
 --  * Pode rodar de novo: apaga os dados de teste anteriores antes de recriar.
 --  * Para remover tudo depois: rode supabase/dev/test_data_cleanup.sql.
@@ -266,6 +266,21 @@ begin
     join public.providers pr on pr.name = e.nm and pr.created_by = any (v_user_ids)
     join public.categories c on c.slug = e.slug
   on conflict do nothing;
+
+  -- (migration 0009) Instagram/site em alguns perfis e visitas/cliques dos últimos 35 dias, para o painel ter dados
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'providers' and column_name = 'instagram') then
+    update public.providers set instagram = 'teste.' || lower(regexp_replace(split_part(name, ' ', 1), '[^A-Za-z]', '', 'g')),
+                                website = case when random() < 0.4 then 'https://teste-' || lower(regexp_replace(split_part(name, ' ', 1), '[^A-Za-z]', '', 'g')) || '.com.br' end
+     where created_by = any (v_user_ids) and random() < 0.5;
+    insert into public.provider_events (provider_id, condo_id, user_id, kind, created_at)
+    select pr.id, v_condo,
+           v_user_ids[1 + floor(random() * array_length(v_user_ids, 1))::int],
+           case when random() < 0.8 then 'view' else 'whatsapp' end,
+           now() - (random() * 35 || ' days')::interval
+      from public.providers pr
+      cross join lateral generate_series(1, (power(random(), 2) * 70)::int + 1) g(n)
+     where pr.created_by = any (v_user_ids);
+  end if;
 
   raise notice 'Pronto: % prestadores e % avaliações de teste.',
     (select count(*) from public.providers where created_by = any (v_user_ids)),

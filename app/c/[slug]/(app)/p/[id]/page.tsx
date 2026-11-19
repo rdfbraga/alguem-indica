@@ -1,7 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireMember } from "@/lib/condo";
-import { formatWhatsapp, whatsappLink } from "@/lib/phone";
+import { formatWhatsapp } from "@/lib/phone";
+import { instagramUrl, websiteLabel } from "@/lib/links";
+import { ViewTracker } from "@/components/ViewTracker";
+import type { ProviderStats } from "@/lib/stats";
 import type { Category, CategoryGroup, ProviderRow, ReviewRow } from "@/lib/types";
 import { Stars } from "@/components/Stars";
 import { providerCategoryLabels, parseCategoryIds } from "@/lib/categories";
@@ -32,12 +35,17 @@ export default async function Prestador({
     .from("reviews").select("*").eq("provider_id", id).eq("status", "visible").order("created_at", { ascending: false });
   const reviews = (rs ?? []) as ReviewRow[];
   const mine = reviews.some((r) => r.author_id === user.id);
-  const msg = `Olá, ${p.name}! Vi seu perfil no Alguém indica? (${condo.name}). Pode me ajudar?`;
 
   // Categorias: só autor/admin editam. O aviso "já cadastrado" pode sugerir incluir uma categoria nova.
   // Com dono, só o dono (e o admin) editam; sem dono, quem indicou.
   const isOwner = p.owner_id === user.id;
   const canEdit = member.role === "admin" || (p.owner_id ? isOwner : p.created_by === user.id);
+  // Resultados (últimos 7 dias): só para o dono e o admin.
+  let weekStats: ProviderStats | null = null;
+  if (isOwner || member.role === "admin") {
+    const { data: ws } = await supabase.rpc("provider_stats", { p_provider: id, p_days: 7 });
+    weekStats = (ws ?? null) as ProviderStats | null;
+  }
   let hasPendingClaim = false;
   if (!isOwner && !p.owner_id) {
     const { count } = await supabase
@@ -62,6 +70,7 @@ export default async function Prestador({
 
   return (
     <div className="space-y-4">
+      <ViewTracker providerId={p.id} />
       <Link href={`/c/${slug}/categoria/${p.category_slug}`} className="text-sm text-navy/60">← {p.category_name}</Link>
       {novo && <p className="rounded-2xl bg-green-50 p-3 text-sm font-semibold text-green-700">Indicação publicada! Obrigado por ajudar os vizinhos. 🎉</p>}
       {jaexiste && <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-800">Este profissional já estava cadastrado. Que tal avaliá-lo?</p>}
@@ -120,13 +129,33 @@ export default async function Prestador({
           </div>
         </div>
         {p.description && <p className="whitespace-pre-line text-navy/80">{p.description}</p>}
-        <a href={whatsappLink(p.whatsapp, msg)} target="_blank" rel="noopener noreferrer" className="btn w-full !bg-[#25D366] hover:!bg-[#1ebe57]">
+        <a href={`/c/${slug}/go/whatsapp/${p.id}`} target="_blank" rel="noopener noreferrer" className="btn w-full !bg-[#25D366] hover:!bg-[#1ebe57]">
           💬 Chamar no WhatsApp · {formatWhatsapp(p.whatsapp)}
         </a>
+        {(p.instagram || p.website) && (
+          <div className="flex flex-wrap gap-2">
+            {p.instagram && (
+              <a href={`/c/${slug}/go/instagram/${p.id}`} target="_blank" rel="noopener noreferrer nofollow" className="btn-secondary !px-4 !py-2 !text-sm" title={instagramUrl(p.instagram)}>
+                📷 @{p.instagram}
+              </a>
+            )}
+            {p.website && (
+              <a href={`/c/${slug}/go/website/${p.id}`} target="_blank" rel="noopener noreferrer nofollow" className="btn-secondary !px-4 !py-2 !text-sm" title={p.website}>
+                🌐 {websiteLabel(p.website)}
+              </a>
+            )}
+          </div>
+        )}
+        {weekStats && (
+          <Link href={`/c/${slug}/resultados${isOwner ? "" : `?perfil=${p.id}`}`} className="block rounded-2xl bg-sky-soft p-3 text-sm">
+            <b>📊 Últimos 7 dias:</b> {weekStats.totals.viewers} {weekStats.totals.viewers === 1 ? "pessoa viu" : "pessoas viram"} o perfil e {weekStats.totals.whatsapp} {weekStats.totals.whatsapp === 1 ? "clique" : "cliques"} no WhatsApp.{" "}
+            <span className="font-bold text-sky-brand underline">Ver resultados</span>
+          </Link>
+        )}
         {canEdit && (
           <details className="rounded-2xl border border-navy/10 p-3">
             <summary className="cursor-pointer text-sm font-bold text-sky-brand">✏️ Editar perfil (nome, telefone, descrição e foto)</summary>
-            <EditProfile slug={slug} providerId={p.id} userId={user.id} initial={{ name: p.name, description: p.description, whatsapp: p.whatsapp, photo_url: p.photo_url }} />
+            <EditProfile slug={slug} providerId={p.id} userId={user.id} initial={{ name: p.name, description: p.description, whatsapp: p.whatsapp, photo_url: p.photo_url, instagram: p.instagram ?? null, website: p.website ?? null }} />
           </details>
         )}
         {canEdit && sections.length > 0 && (

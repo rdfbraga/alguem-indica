@@ -67,6 +67,16 @@ export function ProviderForm({
         <label className="label" htmlFor="description">Descrição (opcional)</label>
         <textarea id="description" name="description" rows={3} maxLength={500} className="input" placeholder="O que ele faz, horários, diferenciais…" />
       </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div>
+          <label className="label" htmlFor="instagram">Instagram (opcional)</label>
+          <input id="instagram" name="instagram" maxLength={80} className="input" placeholder="@usuario" autoCapitalize="none" />
+        </div>
+        <div>
+          <label className="label" htmlFor="website">Site (opcional)</label>
+          <input id="website" name="website" maxLength={200} inputMode="url" className="input" placeholder="www.seusite.com.br" autoCapitalize="none" />
+        </div>
+      </div>
       <PhotoField userId={userId} onBusyChange={setUploading} />
       <label className="flex items-start gap-2 rounded-2xl bg-sky-soft p-3 text-sm">
         <input type="checkbox" name="is_me" className="mt-1 h-4 w-4" />

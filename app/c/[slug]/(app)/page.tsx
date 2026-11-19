@@ -30,7 +30,7 @@ export default async function Home({
   const { slug } = await params;
   const sp = await searchParams;
   const q = (sp.q ?? "").trim().slice(0, 60);
-  const { condo, member, supabase } = await requireMember(slug);
+  const { condo, user, member, supabase } = await requireMember(slug);
   const firstName = member.full_name.split(" ")[0];
 
   const [{ data: catData }, { data: groupData }] = await Promise.all([
@@ -89,12 +89,23 @@ export default async function Home({
   const topIds = new Set(topRated.map((p) => p.id));
   const newest = providers.filter((p) => !topIds.has(p.id)).slice(0, 5);
 
+  const { count: ownedCount } = await supabase
+    .from("providers").select("id", { count: "exact", head: true })
+    .eq("condo_id", condo.id).eq("owner_id", user.id);
+
   return (
     <div className="space-y-6">
       <section className="rounded-3xl bg-gradient-to-br from-brand-500 to-[#e85400] p-5 text-white shadow-md">
         <h1 className="text-2xl font-extrabold">Olá, {firstName}! 👋</h1>
         <p className="mt-1 font-semibold text-white">Precisando de alguém de confiança? Veja quem os seus vizinhos indicam.</p>
       </section>
+      {(ownedCount ?? 0) > 0 && (
+        <Link href={`/c/${slug}/resultados`} className="card flex items-center gap-3 transition hover:border-brand-500">
+          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-50 text-xl">📊</span>
+          <span className="flex-1"><b>Veja como seu perfil está indo</b><br /><span className="text-sm text-navy/65">Visitas e cliques no WhatsApp</span></span>
+          <span className="text-navy/40" aria-hidden>›</span>
+        </Link>
+      )}
       <SearchBox slug={slug} q="" suggestions={suggestions} />
 
       <section>

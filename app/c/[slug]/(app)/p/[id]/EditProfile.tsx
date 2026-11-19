@@ -14,7 +14,7 @@ export function EditProfile({
   slug: string;
   providerId: string;
   userId: string;
-  initial: { name: string; description: string; whatsapp: string; photo_url: string | null };
+  initial: { name: string; description: string; whatsapp: string; photo_url: string | null; instagram: string | null; website: string | null };
 }) {
   const [state, action, pending] = useActionState<FormState, FormData>(updateProviderProfile.bind(null, slug, providerId), undefined);
   const [busy, setBusy] = useState(false);
@@ -31,6 +31,16 @@ export function EditProfile({
       <div>
         <label className="label" htmlFor="ep-desc">Descrição</label>
         <textarea id="ep-desc" name="description" rows={4} maxLength={500} defaultValue={initial.description} className="input" placeholder="O que você faz, horários, diferenciais…" />
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div>
+          <label className="label" htmlFor="ep-instagram">Instagram</label>
+          <input id="ep-instagram" name="instagram" maxLength={80} defaultValue={initial.instagram ? `@${initial.instagram}` : ""} className="input" placeholder="@usuario" autoCapitalize="none" />
+        </div>
+        <div>
+          <label className="label" htmlFor="ep-website">Site</label>
+          <input id="ep-website" name="website" maxLength={200} inputMode="url" defaultValue={initial.website ?? ""} className="input" placeholder="www.seusite.com.br" autoCapitalize="none" />
+        </div>
       </div>
       <PhotoField userId={userId} initialUrl={initial.photo_url ?? ""} onBusyChange={setBusy} />
       {state?.error && <p className="rounded-2xl bg-red-50 p-3 text-sm text-red-700">{state.error}</p>}

@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCondo, getUser, requireAdmin, requireMember } from "@/lib/condo";
 import { normalizeWhatsapp } from "@/lib/phone";
+import { normalizeInstagram, normalizeWebsite } from "@/lib/links";
 import type { FormState } from "@/lib/types";
 import { parseFeedbackKind, validateMessage } from "@/lib/feedback";
 import { MAX_CATEGORIES, parseCategoryIds } from "@/lib/categories";
@@ -63,6 +64,10 @@ export async function createProvider(slug: string, _: FormState, fd: FormData): 
   if (!whatsapp) return { error: "WhatsApp inválido. Use o formato (11) 99999-8888." };
   if (description.length > 500) return { error: "A descrição deve ter até 500 caracteres." };
   if (photo_url && !photo_url.includes("/provider-photos/")) return { error: "Foto inválida." };
+  const ig = normalizeInstagram(str(fd, "instagram"));
+  if (!ig.ok) return { error: "Instagram inválido. Use o @ do perfil ou o link, ex.: @nomedaloja." };
+  const site = normalizeWebsite(str(fd, "website"));
+  if (!site.ok) return { error: "Site inválido. Use um endereço como www.seusite.com.br." };
   const cats = await readCategories(supabase, fd);
   if (!cats.ok) return { error: cats.error };
 
@@ -72,6 +77,8 @@ export async function createProvider(slug: string, _: FormState, fd: FormData): 
     .insert({
       condo_id: condo.id, category_id: cats.ids[0], created_by: user.id, name, description, whatsapp, photo_url, kind, block,
       ...(cats.hasOther ? { custom_category: cats.custom } : {}),
+      ...(ig.value ? { instagram: ig.value } : {}),
+      ...(site.value ? { website: site.value } : {}),
     })
     .select("id")
     .single();
@@ -310,8 +317,13 @@ export async function updateProviderProfile(slug: string, providerId: string, _:
   if (name.length < 2 || name.length > 80) return { error: "O nome deve ter de 2 a 80 caracteres." };
   if (!whatsapp) return { error: "WhatsApp inválido. Use o formato (11) 99999-8888." };
   if (description.length > 500) return { error: "A descrição deve ter até 500 caracteres." };
+  const ig = normalizeInstagram(str(fd, "instagram"));
+  if (!ig.ok) return { error: "Instagram inválido. Use o @ do perfil ou o link, ex.: @nomedaloja." };
+  const site = normalizeWebsite(str(fd, "website"));
+  if (!site.ok) return { error: "Site inválido. Use um endereço como www.seusite.com.br." };
   const { error } = await supabase.rpc("update_provider_profile", {
     p_provider: providerId, p_name: name, p_description: description, p_whatsapp: whatsapp, p_photo_url: photo_url || null,
+    p_instagram: ig.value, p_website: site.value,
   });
   if (error) {
     if (error.code === "23505") return { error: "Este WhatsApp já está cadastrado em outro perfil." };

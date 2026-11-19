@@ -10,6 +10,8 @@ Indicações de prestadores de serviço **dentro do seu condomínio**: moradores
 - **Sem verificação de moradia** no MVP (decisão consciente — ver “Próximos passos”).
 - Home com **categorias em grupos recolhíveis** (Casa, Saúde, Profissionais, Família, Pets, Beleza, Comida e festas, Carro/tech), **busca inteligente** (sem acento, tolera erros de digitação e entende sinônimos como “bombeiro hidráulico” → Encanador) e destaques: **mais bem avaliados** e **indicações recentes**.
 - Listas com **ordenação** (melhor avaliados, mais avaliados, mais recentes) e **filtro** morador/externo. “Melhor avaliados” usa média ponderada: 1 avaliação nota 5 não passa por cima de 20 avaliações com 4,8.
+- **Resultados:** visitas e cliques no WhatsApp/Instagram/site, em `/c/<slug>/resultados` (dono do perfil) e na visão geral do admin. Só totais; ninguém vê quem foi.
+- **Instagram e site** no perfil (grátis), com cliques medidos.
 - **Posse de perfil:** o prestador pede “Este perfil é meu”, o admin aprova com um clique e ele passa a ser o único (com o admin) a editar nome, telefone, descrição, foto e categorias. O perfil ganha o selo “confirmado pelo próprio”.
 - Um profissional pode atender **até 3 categorias** no mesmo perfil (a primeira é a principal); só quem indicou ou o admin edita.
 - Qualquer morador logado **indica um profissional** (morador ou externo): nome, categoria, descrição, foto, WhatsApp. Publica na hora.
@@ -23,7 +25,7 @@ Indicações de prestadores de serviço **dentro do seu condomínio**: moradores
 ## Como rodar
 
 1. **Supabase**: crie um projeto em supabase.com.
-2. No **SQL Editor**, rode nesta ordem: `supabase/migrations/0001_init.sql`, `0002_grants.sql`, `0003_search.sql`, `0004_custom_category.sql`, `0005_category_groups.sql` (grupos e ~50 categorias), `0006_feedback.sql` (contato com a administração), `0007_multi_category.sql` (um perfil em até 3 categorias), `0008_profile_ownership.sql` (posse de perfil) e depois `supabase/seed.sql` (um condomínio de exemplo, `meu-condominio`; edite slug/nome). Em um projeto já em uso, rode só as migrations que faltam.
+2. No **SQL Editor**, rode nesta ordem: `supabase/migrations/0001_init.sql`, `0002_grants.sql`, `0003_search.sql`, `0004_custom_category.sql`, `0005_category_groups.sql` (grupos e ~50 categorias), `0006_feedback.sql` (contato com a administração), `0007_multi_category.sql` (um perfil em até 3 categorias), `0008_profile_ownership.sql` (posse de perfil), `0009_metrics_and_links.sql` (medição, Instagram e site) e depois `supabase/seed.sql` (um condomínio de exemplo, `meu-condominio`; edite slug/nome). Em um projeto já em uso, rode só as migrations que faltam.
 3. **Authentication → Providers**: e-mail já vem ativo; ative **Google** se quiser (precisa de Client ID/Secret do Google Cloud).
 4. **Authentication → URL Configuration**: em *Site URL* coloque a URL do app e em *Redirect URLs* adicione `http://localhost:3000/auth/callback` e `https://SEU-DOMINIO/auth/callback`.
 5. Copie `.env.example` para `.env.local` e preencha URL e anon key (Project Settings → API).

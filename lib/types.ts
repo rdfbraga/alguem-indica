@@ -21,6 +21,8 @@ export type ProviderRow = {
   custom_category: string | null;
   custom_category_reviewed: boolean;
   created_by?: string;
+  instagram?: string | null;
+  website?: string | null;
   owner_id?: string | null;
   owner_since?: string | null;
   category_id?: number;
