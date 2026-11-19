@@ -22,8 +22,12 @@ export async function completeOnboarding(slug: string, _: FormState, fd: FormDat
   const supabase = await createClient();
   const { error } = await supabase
     .from("members")
-    .upsert({ user_id: user.id, condo_id: condo.id, full_name, block, unit }, { onConflict: "user_id,condo_id", ignoreDuplicates: true });
-  if (error) return { error: "Não foi possível concluir o cadastro. Tente novamente." };
+    .insert({ user_id: user.id, condo_id: condo.id, full_name, block, unit });
+  // 23505 = já era morador (ex.: clique duplo): segue normalmente.
+  if (error && error.code !== "23505") {
+    console.error("completeOnboarding", error);
+    return { error: `Não foi possível concluir o cadastro (${error.code ?? "erro"}: ${error.message}).` };
+  }
   redirect(`/c/${slug}`);
 }
 
