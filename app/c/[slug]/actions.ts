@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCondo, getUser, requireAdmin, requireMember } from "@/lib/condo";
 import { normalizeWhatsapp } from "@/lib/phone";
 import type { FormState } from "@/lib/types";
+import { parseFeedbackKind, validateMessage } from "@/lib/feedback";
 
 const str = (fd: FormData, k: string) => String(fd.get(k) ?? "").trim();
 
@@ -179,5 +180,47 @@ export async function adminDismissSuggestion(slug: string, fd: FormData) {
   const ids = idsFrom(fd);
   if (!ids.length) return;
   await supabase.from("providers").update({ custom_category_reviewed: true }).in("id", ids).eq("condo_id", condo.id);
+  revalidatePath(`/c/${slug}`, "layout");
+}
+
+// ─── Contato com a administração ───
+export async function submitFeedback(slug: string, _: FormState, fd: FormData): Promise<FormState> {
+  const { condo, user, supabase } = await requireMember(slug);
+  const kind = parseFeedbackKind(str(fd, "kind"));
+  if (!kind) return { error: "Escolha o tipo da mensagem." };
+  const msg = validateMessage(String(fd.get("message") ?? ""));
+  if (!msg.ok) return { error: msg.error };
+  const reply_to = str(fd, "reply_to").slice(0, 120) || null;
+
+  const { error } = await supabase
+    .from("feedback")
+    .insert({ condo_id: condo.id, user_id: user.id, kind, message: msg.text, reply_to });
+  if (error) {
+    if (error.message?.includes("rate_limit")) {
+      return { error: "Você já enviou 5 mensagens hoje. Tente de novo amanhã." };
+    }
+    console.error("submitFeedback", error);
+    return { error: "Não foi possível enviar agora. Tente de novo em instantes." };
+  }
+  revalidatePath(`/c/${slug}`, "layout");
+  return { ok: "Mensagem enviada! A resposta aparece aqui mesmo, nesta página." };
+}
+
+export async function adminReplyFeedback(slug: string, id: string, fd: FormData) {
+  const { condo, supabase } = await requireAdmin(slug);
+  const msg = validateMessage(String(fd.get("reply") ?? ""));
+  if (!msg.ok || !UUID.test(id)) return;
+  await supabase
+    .from("feedback")
+    .update({ admin_reply: msg.text, status: "answered", replied_at: new Date().toISOString() })
+    .eq("id", id)
+    .eq("condo_id", condo.id);
+  revalidatePath(`/c/${slug}`, "layout");
+}
+
+export async function adminSetFeedbackStatus(slug: string, id: string, status: "new" | "archived") {
+  const { condo, supabase } = await requireAdmin(slug);
+  if (!UUID.test(id)) return;
+  await supabase.from("feedback").update({ status }).eq("id", id).eq("condo_id", condo.id);
   revalidatePath(`/c/${slug}`, "layout");
 }

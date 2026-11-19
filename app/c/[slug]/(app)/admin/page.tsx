@@ -1,10 +1,13 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/condo";
-import type { Category, CategoryGroup, ProviderRow, ReviewRow } from "@/lib/types";
+import type { Category, CategoryGroup, FeedbackRow, ProviderRow, ReviewRow } from "@/lib/types";
+import { KIND_BY_VALUE } from "@/lib/feedback";
 import { groupCategories } from "@/lib/groups";
 import { capitalizeFirst, findSimilarCategories, groupSuggestions } from "@/lib/suggestions";
 import {
   adminClearFlag,
+  adminReplyFeedback,
+  adminSetFeedbackStatus,
   adminCreateCategory,
   adminDismissSuggestion,
   adminMoveToCategory,
@@ -39,6 +42,21 @@ export default async function Admin({ params }: { params: Promise<{ slug: string
     supabase.from("category_groups").select("id,slug,name,icon").order("sort"),
   ]);
   const groups = (groupData ?? []) as CategoryGroup[];
+
+  const { data: fbData } = await supabase
+    .from("feedback").select("*").eq("condo_id", condo.id)
+    .order("created_at", { ascending: false }).limit(60);
+  const feedback = (fbData ?? []) as FeedbackRow[];
+  const fbAuthors = feedback.length
+    ? ((await supabase.from("members").select("user_id,full_name,block,unit").eq("condo_id", condo.id)
+        .in("user_id", [...new Set(feedback.map((f) => f.user_id))])).data ?? [])
+    : [];
+  const authorOf = (uid: string) => {
+    const m = fbAuthors.find((a) => a.user_id === uid);
+    return m ? `${m.full_name} · Bloco ${m.block}, ${m.unit}` : "Morador";
+  };
+  const fbNew = feedback.filter((f) => f.status === "new");
+  const fbDone = feedback.filter((f) => f.status !== "new").slice(0, 15);
   const suggestions = groupSuggestions((pendingData ?? []) as { id: string; name: string; custom_category: string | null }[]);
   const allCategories = ((catData ?? []) as Category[]).filter((c) => c.slug !== "outros");
   const moveSections = groupCategories(groups, allCategories);
@@ -58,6 +76,47 @@ export default async function Admin({ params }: { params: Promise<{ slug: string
         <h1 className="text-xl font-bold">Painel admin</h1>
         <p className="text-sm text-navy/60">{members ?? 0} moradores · {(recent ?? []).length}+ prestadores recentes</p>
       </div>
+
+      <section className="space-y-3">
+        <h2 className="font-semibold">💬 Mensagens dos moradores ({fbNew.length} nova(s))</h2>
+        {fbNew.map((f) => (
+          <div key={f.id} className="card space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-1 text-sm">
+              <span className="font-extrabold">{KIND_BY_VALUE[f.kind].icon} {KIND_BY_VALUE[f.kind].label}</span>
+              <span className="text-xs text-navy/50">{new Date(f.created_at).toLocaleString("pt-BR")}</span>
+            </div>
+            <p className="text-sm text-navy/60">De <b>{authorOf(f.user_id)}</b>{f.reply_to ? <> · contato: <b>{f.reply_to}</b></> : null}</p>
+            <p className="whitespace-pre-line">{f.message}</p>
+            <form action={adminReplyFeedback.bind(null, slug, f.id)} className="space-y-2">
+              <textarea name="reply" required minLength={5} maxLength={1000} rows={3} className="input" placeholder="Escreva a resposta (o morador vê na página Ajuda)" />
+              <div className="flex flex-wrap items-center gap-3">
+                <button className="btn !px-4 !py-2 !text-sm">Responder</button>
+              </div>
+            </form>
+            <form action={adminSetFeedbackStatus.bind(null, slug, f.id, "archived")}>
+              <button className="text-sm font-semibold text-navy/60 underline">Arquivar sem responder</button>
+            </form>
+          </div>
+        ))}
+        {fbNew.length === 0 && <p className="text-sm text-navy/60">Nenhuma mensagem nova. 🎉</p>}
+        {fbDone.length > 0 && (
+          <details className="card !rounded-2xl !p-3 text-sm">
+            <summary className="cursor-pointer font-bold text-sky-brand">Respondidas e arquivadas ({fbDone.length})</summary>
+            <div className="mt-3 space-y-3">
+              {fbDone.map((f) => (
+                <div key={f.id} className="space-y-1 border-t border-navy/10 pt-3">
+                  <div className="text-xs text-navy/50">{KIND_BY_VALUE[f.kind].icon} {authorOf(f.user_id)} · {new Date(f.created_at).toLocaleDateString("pt-BR")} · {f.status === "answered" ? "respondida" : "arquivada"}</div>
+                  <p className="whitespace-pre-line">{f.message}</p>
+                  {f.admin_reply && <p className="rounded-xl bg-sky-soft p-2 text-navy/90"><b>Resposta:</b> {f.admin_reply}</p>}
+                  <form action={adminSetFeedbackStatus.bind(null, slug, f.id, "new")}>
+                    <button className="text-xs font-semibold text-navy/60 underline">Reabrir</button>
+                  </form>
+                </div>
+              ))}
+            </div>
+          </details>
+        )}
+      </section>
 
       <section className="space-y-3">
         <h2 className="font-semibold">🏷️ Categorias sugeridas ({suggestions.length})</h2>

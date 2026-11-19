@@ -14,13 +14,14 @@ Indicações de prestadores de serviço **dentro do seu condomínio**: moradores
 - **Detecção de duplicidade**: WhatsApp igual é bloqueado (leva ao perfil existente); nome parecido na mesma categoria, ou muitos cadastros do mesmo morador em 24h, **sinalizam** o item na fila do admin.
 - Perfil com botão **“Chamar no WhatsApp”** (`wa.me` com mensagem pronta), média e avaliações.
 - **Avaliação 1–5 + comentário**, uma por morador por prestador, exibindo “Maria S. · Bloco B”.
+- **Ajuda** (`/c/<slug>/ajuda`): o morador envia suporte, problema ou sugestão e vê a resposta da administração na própria página (limite de 5 mensagens por dia).
 - **Denunciar** prestador/avaliação; **painel admin** (`/c/<slug>/admin`) com fila de suspeitos, denúncias, ocultar/reexibir.
 - Páginas de **Termos** e **Privacidade (LGPD)** — modelos iniciais; revise com um advogado.
 
 ## Como rodar
 
 1. **Supabase**: crie um projeto em supabase.com.
-2. No **SQL Editor**, rode nesta ordem: `supabase/migrations/0001_init.sql`, `0002_grants.sql`, `0003_search.sql`, `0004_custom_category.sql`, `0005_category_groups.sql` (grupos e ~50 categorias) e depois `supabase/seed.sql` (um condomínio de exemplo, `meu-condominio`; edite slug/nome). Em um projeto já em uso, rode só as migrations que faltam.
+2. No **SQL Editor**, rode nesta ordem: `supabase/migrations/0001_init.sql`, `0002_grants.sql`, `0003_search.sql`, `0004_custom_category.sql`, `0005_category_groups.sql` (grupos e ~50 categorias), `0006_feedback.sql` (contato com a administração) e depois `supabase/seed.sql` (um condomínio de exemplo, `meu-condominio`; edite slug/nome). Em um projeto já em uso, rode só as migrations que faltam.
 3. **Authentication → Providers**: e-mail já vem ativo; ative **Google** se quiser (precisa de Client ID/Secret do Google Cloud).
 4. **Authentication → URL Configuration**: em *Site URL* coloque a URL do app e em *Redirect URLs* adicione `http://localhost:3000/auth/callback` e `https://SEU-DOMINIO/auth/callback`.
 5. Copie `.env.example` para `.env.local` e preencha URL e anon key (Project Settings → API).

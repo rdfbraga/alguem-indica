@@ -41,3 +41,16 @@ export type ReviewRow = {
   created_at: string;
 };
 export type FormState = { error?: string; ok?: string } | undefined;
+
+export type FeedbackRow = {
+  id: string;
+  condo_id: string;
+  user_id: string;
+  kind: "suporte" | "problema" | "sugestao" | "outro";
+  message: string;
+  reply_to: string | null;
+  status: "new" | "answered" | "archived";
+  admin_reply: string | null;
+  replied_at: string | null;
+  created_at: string;
+};
