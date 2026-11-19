@@ -11,6 +11,7 @@ import { PlanCard } from "@/components/PlanCard";
 import { ShowcaseView } from "@/components/ShowcaseView";
 import { ShowcaseEditor } from "./ShowcaseEditor";
 import { ReplyBox } from "./ReplyBox";
+import { profileOrigin, shareProfileLink, shareProfileText } from "@/lib/origin";
 import { Stars } from "@/components/Stars";
 import { providerCategoryLabels, parseCategoryIds } from "@/lib/categories";
 import { groupCategories } from "@/lib/groups";
@@ -26,10 +27,10 @@ export default async function Prestador({
   searchParams,
 }: {
   params: Promise<{ slug: string; id: string }>;
-  searchParams: Promise<{ novo?: string; jaexiste?: string; addcat?: string; catsOk?: string; catsErro?: string; plano?: string }>;
+  searchParams: Promise<{ novo?: string; jaexiste?: string; addcat?: string; catsOk?: string; catsErro?: string; plano?: string; reivindicar?: string }>;
 }) {
   const { slug, id } = await params;
-  const { novo, jaexiste, addcat, catsOk, catsErro, plano } = await searchParams;
+  const { novo, jaexiste, addcat, catsOk, catsErro, plano, reivindicar } = await searchParams;
   const { condo, user, member, supabase } = await requireMember(slug);
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
 
@@ -90,6 +91,13 @@ export default async function Prestador({
     erro: ["Não foi possível ativar o teste agora. Tente de novo.", "warn"],
   };
   const flash = plano ? planMsg[plano] : undefined;
+  // Origem do perfil e compartilhamento (para quem cadastrou o próprio serviço ou já é o dono).
+  const origin = profileOrigin(p);
+  const isSelfRegistrant = origin === "self_pending" && p.created_by === user.id;
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.alguemindica.app.br";
+  const shareHref = shareProfileLink(shareProfileText({ name: p.name, categories: providerCategoryLabels(p), url: `${siteUrl}/c/${slug}/p/${p.id}` }));
+  const askClaimHere = Boolean(reivindicar) && !isOwner && !p.owner_id && !hasPendingClaim;
+  const alreadyOwned = Boolean(reivindicar) && !isOwner && Boolean(p.owner_id);
   const currentIds = p.category_ids?.length ? p.category_ids : p.category_id ? [p.category_id] : [];
   const wantedIds = parseCategoryIds((addcat ?? "").split(",")).filter((x) => !currentIds.includes(x));
   let sections: ReturnType<typeof groupCategories<CategoryGroup, Category>> = [];
@@ -109,8 +117,28 @@ export default async function Prestador({
     <div className="space-y-4">
       <ViewTracker providerId={p.id} />
       <Link href={`/c/${slug}/categoria/${p.category_slug}`} className="text-sm text-navy/60">← {p.category_name}</Link>
-      {novo && <p className="rounded-2xl bg-green-50 p-3 text-sm font-semibold text-green-700">Indicação publicada! Obrigado por ajudar os vizinhos. 🎉</p>}
-      {jaexiste && <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-800">Este profissional já estava cadastrado. Que tal avaliá-lo?</p>}
+      {novo === "eu" ? (
+        <div className="space-y-2 rounded-2xl bg-green-50 p-3 text-sm text-green-800">
+          <p className="font-bold">Seu perfil está no ar! 🎉</p>
+          <p>A administração vai confirmar que é você e liberar o selo ✅. Enquanto isso, complete a foto e a descrição em “Editar perfil” e peça avaliações aos vizinhos.</p>
+          <a href={shareHref} target="_blank" rel="noopener noreferrer" className="btn !bg-[#25D366] !px-4 !py-2 !text-sm hover:!bg-[#1ebe57]">📲 Compartilhar meu perfil no WhatsApp</a>
+        </div>
+      ) : novo ? (
+        <p className="rounded-2xl bg-green-50 p-3 text-sm font-semibold text-green-700">Indicação publicada! Obrigado por ajudar os vizinhos. 🎉</p>
+      ) : null}
+      {jaexiste && !reivindicar && <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-800">Este profissional já estava cadastrado. Que tal avaliá-lo?</p>}
+      {askClaimHere && (
+        <div className="space-y-2 rounded-2xl border-2 border-brand-500 bg-brand-50 p-3">
+          <p className="font-bold">Este perfil já existe. É você? 🙋</p>
+          <p className="text-sm text-navy/75">Um vizinho já indicou este número. Se é o seu serviço, peça para assumir o perfil: a administração confirma e você passa a editar tudo.</p>
+          <ClaimProfile slug={slug} providerId={p.id} defaultOpen />
+        </div>
+      )}
+      {alreadyOwned && (
+        <p className="rounded-2xl bg-amber-50 p-3 text-sm text-amber-900">
+          Este perfil já tem dono. Se você acha que há um engano, <Link className="font-bold underline" href={`/c/${slug}/ajuda?tipo=problema&msg=${encodeURIComponent(`O perfil "${p.name}" é meu, mas já aparece com dono.`)}`}>fale com a administração</Link>.
+        </p>
+      )}
       {flash && <p className={`rounded-2xl p-3 text-sm font-semibold ${flash[1] === "ok" ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-900"}`}>{flash[0]}</p>}
       {catsOk && <p className="rounded-2xl bg-green-50 p-3 text-sm font-semibold text-green-700">Categorias atualizadas! ✅</p>}
       {catsErro && <p className="rounded-2xl bg-red-50 p-3 text-sm text-red-700">Não foi possível atualizar as categorias. Tente de novo pelo botão “Editar categorias”.</p>}
@@ -154,9 +182,14 @@ export default async function Prestador({
             {flags.plans && planActive && (
               <span className="mr-1 mt-0.5 inline-block rounded-full bg-brand-50 px-2 py-0.5 text-xs font-bold text-brand-700">⭐ Destaque</span>
             )}
-            {p.owner_id && (
+            {origin === "confirmed" && (
               <span className="mt-0.5 inline-block rounded-full bg-green-50 px-2 py-0.5 text-xs font-bold text-green-700" title="O próprio profissional assumiu este perfil">
                 ✅ Perfil confirmado pelo próprio
+              </span>
+            )}
+            {origin === "self_pending" && (
+              <span className="mt-0.5 inline-block rounded-full bg-amber-50 px-2 py-0.5 text-xs font-bold text-amber-800" title="O próprio profissional cadastrou este perfil; a administração ainda vai confirmar">
+                ⏳ Cadastrado pelo próprio · aguardando confirmação
               </span>
             )}
             <div className="text-sm text-navy/60">
@@ -204,6 +237,9 @@ export default async function Prestador({
             <summary className="cursor-pointer text-sm font-bold text-sky-brand">✏️ Editar categorias</summary>
             <EditCategories slug={slug} providerId={p.id} sections={sections} initialIds={currentIds} initialCustom={p.custom_category ?? ""} />
           </details>
+        )}
+        {(isOwner || isSelfRegistrant) && (
+          <a href={shareHref} target="_blank" rel="noopener noreferrer" className="btn-secondary !px-4 !py-2 !text-sm">📲 Compartilhar meu perfil no WhatsApp</a>
         )}
         {flags.plans && (isOwner || isAdmin) && <PlanCard slug={slug} provider={{ id: p.id, name: p.name }} plan={plan} isOwner={isOwner} isAdmin={isAdmin} />}
         {canShowcase && canEdit && (

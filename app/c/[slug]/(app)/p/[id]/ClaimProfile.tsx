@@ -3,11 +3,11 @@ import { useActionState } from "react";
 import { requestProfileClaim } from "../../../actions";
 import type { FormState } from "@/lib/types";
 
-export function ClaimProfile({ slug, providerId }: { slug: string; providerId: string }) {
+export function ClaimProfile({ slug, providerId, defaultOpen = false }: { slug: string; providerId: string; defaultOpen?: boolean }) {
   const [state, action, pending] = useActionState<FormState, FormData>(requestProfileClaim.bind(null, slug, providerId), undefined);
   if (state?.ok) return <p className="rounded-2xl bg-green-50 p-3 text-sm font-semibold text-green-700">{state.ok}</p>;
   return (
-    <details className="rounded-2xl border border-navy/10 p-3">
+    <details open={defaultOpen} className="rounded-2xl border border-navy/10 p-3">
       <summary className="cursor-pointer text-sm font-bold text-sky-brand">🙋 Este perfil é meu</summary>
       <form action={action} className="mt-3 space-y-3">
         <p className="text-sm text-navy/70">

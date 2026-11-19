@@ -24,6 +24,10 @@ export function OnboardingForm({ slug, defaultName }: { slug: string; defaultNam
       <p className="text-xs text-navy/60">
         Seu nome e unidade <b>não</b> ficam públicos. Nas avaliações aparece só seu primeiro nome, a inicial do sobrenome e o bloco.
       </p>
+      <label className="flex items-start gap-2 rounded-2xl bg-sky-soft p-3 text-sm">
+        <input type="checkbox" name="offers_service" className="mt-1 h-4 w-4" />
+        <span><b>Também ofereço algum serviço aos vizinhos</b> (opcional). Depois de entrar, você cadastra seu perfil.</span>
+      </label>
       <label className="flex items-start gap-2 text-sm">
         <input type="checkbox" name="terms" className="mt-1 h-4 w-4" />
         <span>

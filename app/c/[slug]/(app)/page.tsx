@@ -120,6 +120,14 @@ export default async function Home({
       )}
       <SearchBox slug={slug} q="" suggestions={suggestions} />
 
+      {(ownedCount ?? 0) === 0 && (
+        <Link href={`/c/${slug}/novo?eu=1`} className="card flex items-center gap-3 !p-3 transition hover:border-brand-500">
+          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-50 text-xl">🧰</span>
+          <span className="flex-1 text-sm"><b>Presta algum serviço?</b><br /><span className="text-navy/65">Divulgue seu perfil para os vizinhos.</span></span>
+          <span className="text-navy/40" aria-hidden>›</span>
+        </Link>
+      )}
+
       <section>
         <h2 className="mb-3 text-lg font-extrabold">O que você procura?</h2>
         <div className="space-y-2">

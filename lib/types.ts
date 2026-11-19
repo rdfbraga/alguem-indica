@@ -24,6 +24,7 @@ export type ProviderRow = {
   instagram?: string | null;
   hours_text?: string | null;
   plan_active?: boolean;
+  self_pending?: boolean;
   website?: string | null;
   owner_id?: string | null;
   owner_since?: string | null;

@@ -19,6 +19,7 @@ export function ProviderCard({ slug, p, planBadge = false }: { slug: string; p: 
         <div className="truncate text-sm text-navy/60">
           {providerCategoryLabels(p).join(" · ")}
           {p.kind === "resident" ? ` · Morador${p.block ? ` (Bloco ${p.block})` : ""}` : " · Externo indicado"}
+          {p.self_pending ? " · Cadastro próprio" : ""}
         </div>
         <div className="mt-0.5 flex items-center gap-1 text-sm">
           {p.review_count > 0 ? (

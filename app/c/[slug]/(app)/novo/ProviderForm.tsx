@@ -11,13 +11,19 @@ export function ProviderForm({
   sections,
   userId,
   defaultBlock,
+  defaultName,
+  initialMode,
 }: {
   slug: string;
   sections: Section<GroupLike, Category>[];
   userId: string;
   defaultBlock: string;
+  defaultName: string;
+  initialMode: "self" | "other";
 }) {
   const [state, action, pending] = useActionState<FormState, FormData>(createProvider.bind(null, slug), undefined);
+  const [mode, setMode] = useState<"self" | "other">(initialMode);
+  const self = mode === "self";
   const [kind, setKind] = useState<"resident" | "external">("external");
   const [categoryIds, setCategoryIds] = useState<number[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -26,9 +32,34 @@ export function ProviderForm({
 
   return (
     <form action={action} className="space-y-4">
+      <div role="radiogroup" aria-label="O que você quer fazer?" className="grid grid-cols-2 gap-2">
+        {([["other", "👥", "Indicar alguém que conheço"], ["self", "🧰", "Cadastrar meu serviço"]] as const).map(([v, icon, label]) => (
+          <button
+            type="button"
+            key={v}
+            role="radio"
+            aria-checked={mode === v}
+            onClick={() => setMode(v)}
+            className={`rounded-2xl border-2 p-3 text-left text-sm font-bold transition ${mode === v ? "border-brand-500 bg-brand-50" : "border-navy/10 bg-white"}`}
+          >
+            <span className="mr-1">{icon}</span>{label}
+          </button>
+        ))}
+      </div>
+      {self ? (
+        <div className="space-y-2 rounded-2xl bg-sky-soft p-3 text-sm">
+          <p><b>Divulgue seu serviço para os vizinhos.</b> Seu perfil entra no ar agora; a administração confirma que é você e libera o selo ✅.</p>
+          <p className="text-navy/70">Disponível para moradores. Se você presta serviços e <b>não mora aqui</b>, peça a um vizinho que te indique; depois você assume o perfil em “Este perfil é meu”.</p>
+          <input type="hidden" name="is_me" value="on" />
+          <input type="hidden" name="kind" value="resident" />
+          <input type="hidden" name="block" value={defaultBlock} />
+        </div>
+      ) : (
+        <p className="rounded-2xl bg-sky-soft p-3 text-sm">Conhece um bom profissional? Indique para os vizinhos. Ele(a) poderá assumir o perfil depois.</p>
+      )}
       <div>
-        <label className="label" htmlFor="name">Nome do profissional</label>
-        <input id="name" name="name" required maxLength={80} className="input" placeholder="Ex.: João Silva" />
+        <label className="label" htmlFor="name">{self ? "Seu nome (ou do seu negócio)" : "Nome do profissional"}</label>
+        <input key={mode} id="name" name="name" required maxLength={80} defaultValue={self ? defaultName : ""} className="input" placeholder={self ? "Ex.: Maria Costa Manicure" : "Ex.: João Silva"} />
       </div>
       <div>
         <span className="label">Categoria</span>
@@ -42,6 +73,7 @@ export function ProviderForm({
           <p className="mt-1 text-xs text-navy/60">A indicação já fica publicada em “Outros”. Se várias pessoas pedirem, a administração pode criar uma categoria própria.</p>
         </div>
       )}
+      {!self && (<>
       <div>
         <span className="label">Quem é?</span>
         <div className="grid grid-cols-2 gap-2">
@@ -59,13 +91,14 @@ export function ProviderForm({
           <input id="block" name="block" defaultValue={defaultBlock} maxLength={20} className="input" />
         </div>
       )}
+      </>)}
       <div>
         <label className="label" htmlFor="whatsapp">WhatsApp</label>
         <input id="whatsapp" name="whatsapp" required inputMode="tel" className="input" placeholder="(11) 99999-8888" />
       </div>
       <div>
         <label className="label" htmlFor="description">Descrição (opcional)</label>
-        <textarea id="description" name="description" rows={3} maxLength={500} className="input" placeholder="O que ele faz, horários, diferenciais…" />
+        <textarea id="description" name="description" rows={3} maxLength={500} className="input" placeholder={self ? "O que você faz, horários, diferenciais…" : "O que ele faz, horários, diferenciais…"} />
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
@@ -78,15 +111,11 @@ export function ProviderForm({
         </div>
       </div>
       <PhotoField userId={userId} onBusyChange={setUploading} />
-      <label className="flex items-start gap-2 rounded-2xl bg-sky-soft p-3 text-sm">
-        <input type="checkbox" name="is_me" className="mt-1 h-4 w-4" />
-        <span><b>Este profissional sou eu.</b> Vou pedir à administração para confirmar que o perfil é meu (aparece um selo “perfil confirmado”).</span>
-      </label>
       <p className="text-xs text-navy/60">
-        Ao indicar, você confirma que tem autorização para divulgar o contato deste profissional. Evite incluir dados pessoais além do WhatsApp.
+        {self ? "Ao publicar, você confirma que as informações são suas e verdadeiras." : "Ao indicar, você confirma que tem autorização para divulgar o contato deste profissional. Evite incluir dados pessoais além do WhatsApp."}
       </p>
       {state?.error && <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{state.error}</p>}
-      <button disabled={pending || uploading || categoryIds.length === 0} className="btn w-full">{pending ? "Publicando…" : "Publicar indicação"}</button>
+      <button disabled={pending || uploading || categoryIds.length === 0} className="btn w-full">{pending ? "Publicando…" : self ? "Publicar meu perfil" : "Publicar indicação"}</button>
     </form>
   );
 }

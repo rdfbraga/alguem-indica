@@ -309,6 +309,15 @@ begin
              (v_condo, 'Teste · Academia Vida', 'Primeira semana grátis', null, 'https://exemplo.com.br/academia', null, 'Quero conhecer');
   end if;
 
+  -- (migration 0008) alguns moradores "cadastraram o próprio serviço": pedido de posse pendente do autor (aparece na fila do admin)
+  if to_regclass('public.profile_claims') is not null then
+    insert into public.profile_claims (condo_id, provider_id, user_id, note)
+      select pr.condo_id, pr.id, pr.created_by, 'Cadastrou o próprio perfil'
+        from public.providers pr
+       where pr.created_by = any (v_user_ids) and pr.owner_id is null and pr.kind = 'resident'
+       order by random() limit 5;
+  end if;
+
   raise notice 'Pronto: % prestadores e % avaliações de teste.',
     (select count(*) from public.providers where created_by = any (v_user_ids)),
     (select count(*) from public.reviews where author_id = any (v_user_ids));

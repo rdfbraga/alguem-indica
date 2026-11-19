@@ -32,7 +32,8 @@ export async function completeOnboarding(slug: string, _: FormState, fd: FormDat
     console.error("completeOnboarding", error);
     return { error: `Não foi possível concluir o cadastro (${error.code ?? "erro"}: ${error.message}).` };
   }
-  redirect(`/c/${slug}`);
+  // Quem diz que também presta serviço vai direto ao cadastro do próprio perfil.
+  redirect(fd.get("offers_service") === "on" ? `/c/${slug}/novo?eu=1` : `/c/${slug}`);
 }
 
 /** Valida categorias (1 a 3) e o texto de "Outros". Devolve os ids na ordem (a primeira é a principal). */
@@ -57,7 +58,9 @@ export async function createProvider(slug: string, _: FormState, fd: FormData): 
   const { condo, user, member, supabase } = await requireMember(slug);
   const name = str(fd, "name");
   const description = str(fd, "description");
-  const kind = str(fd, "kind");
+  // Cadastro do próprio serviço: só de morador (prestador de fora é indicado por um vizinho e depois assume o perfil).
+  const isMe = fd.get("is_me") === "on";
+  const kind = isMe ? "resident" : str(fd, "kind");
   const photo_url = str(fd, "photo_url") || null;
   const whatsapp = normalizeWhatsapp(str(fd, "whatsapp"));
   if (name.length < 2) return { error: "Informe o nome do prestador." };
@@ -72,7 +75,7 @@ export async function createProvider(slug: string, _: FormState, fd: FormData): 
   const cats = await readCategories(supabase, fd);
   if (!cats.ok) return { error: cats.error };
 
-  const block = kind === "resident" ? str(fd, "block") || member.block : null;
+  const block = isMe ? member.block : kind === "resident" ? str(fd, "block") || member.block : null;
   const { data, error } = await supabase
     .from("providers")
     .insert({
@@ -92,13 +95,13 @@ export async function createProvider(slug: string, _: FormState, fd: FormData): 
         const { data: have } = await supabase.from("provider_categories").select("category_id").eq("provider_id", existing.id);
         const haveIds = new Set([existing.category_id, ...((have ?? []).map((h) => h.category_id as number))]);
         const missing = cats.ids.filter((id) => !haveIds.has(id));
-        redirect(`/c/${slug}/p/${existing.id}?jaexiste=1${missing.length ? `&addcat=${missing.join(",")}` : ""}`);
+        redirect(`/c/${slug}/p/${existing.id}?jaexiste=1${isMe ? "&reivindicar=1" : ""}${missing.length ? `&addcat=${missing.join(",")}` : ""}`);
       }
       return { error: "Este WhatsApp já está cadastrado (possivelmente oculto)." };
     }
     return { error: "Não foi possível salvar. Tente de novo." };
   }
-  if (fd.get("is_me") === "on") {
+  if (isMe) {
     // O autor diz que o perfil é dele: abre um pedido para o admin confirmar (ele já pode editar enquanto isso).
     const { error: claimError } = await supabase.rpc("request_profile_claim", { p_provider: data.id, p_note: "Cadastrou o próprio perfil" });
     if (claimError) console.error("request_profile_claim", claimError);
@@ -110,7 +113,7 @@ export async function createProvider(slug: string, _: FormState, fd: FormData): 
     if (rpcError) console.error("set_provider_categories", rpcError); // o perfil já existe com a categoria principal
   }
   revalidatePath(`/c/${slug}`, "layout");
-  redirect(`/c/${slug}/p/${data.id}?novo=1`);
+  redirect(`/c/${slug}/p/${data.id}?novo=${isMe ? "eu" : "1"}`);
 }
 
 /** Troca as categorias de um perfil (autor ou admin). Devolve texto de erro em português ou null. */
