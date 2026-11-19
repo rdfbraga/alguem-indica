@@ -6,6 +6,21 @@ import { ProviderCard } from "@/components/ProviderCard";
 import { ListControls } from "@/components/ListControls";
 import { SearchBox } from "@/components/SearchBox";
 
+const VISIBLE_CATEGORIES = 9; // 3 linhas de 3
+
+function CategoryTile({ slug, c }: { slug: string; c: Category }) {
+  return (
+    <Link
+      href={`/c/${slug}/categoria/${c.slug}`}
+      title={c.name}
+      className="card flex flex-col items-center justify-center gap-0.5 !rounded-2xl !p-2 text-center transition hover:border-brand-500 active:scale-[0.97]"
+    >
+      <span className="text-2xl leading-none">{c.icon}</span>
+      <span className="line-clamp-2 min-h-[2.1em] text-[11px] font-bold leading-tight">{c.name}</span>
+    </Link>
+  );
+}
+
 export default async function Home({
   params,
   searchParams,
@@ -81,14 +96,20 @@ export default async function Home({
 
       <section>
         <h2 className="mb-3 text-lg font-extrabold">O que você procura?</h2>
-        <div className="grid grid-cols-3 gap-3">
-          {categories.map((c) => (
-            <Link key={c.id} href={`/c/${slug}/categoria/${c.slug}`} className="card flex flex-col items-center gap-2 !p-3 text-center transition hover:-translate-y-0.5 hover:border-brand-500">
-              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-50 text-2xl">{c.icon}</span>
-              <span className="text-xs font-bold leading-tight">{c.name}</span>
-            </Link>
-          ))}
+        <div className="grid grid-cols-3 gap-2">
+          {categories.slice(0, VISIBLE_CATEGORIES).map((c) => <CategoryTile key={c.id} slug={slug} c={c} />)}
         </div>
+        {categories.length > VISIBLE_CATEGORIES && (
+          <details className="group mt-2">
+            <summary className="mx-auto w-fit cursor-pointer list-none rounded-full border-2 border-navy/15 bg-white px-4 py-1.5 text-sm font-bold text-navy transition hover:border-sky-brand/50 [&::-webkit-details-marker]:hidden">
+              <span className="group-open:hidden">Ver todas as categorias (+{categories.length - VISIBLE_CATEGORIES})</span>
+              <span className="hidden group-open:inline">Mostrar menos</span>
+            </summary>
+            <div className="mt-2 grid grid-cols-3 gap-2">
+              {categories.slice(VISIBLE_CATEGORIES).map((c) => <CategoryTile key={c.id} slug={slug} c={c} />)}
+            </div>
+          </details>
+        )}
       </section>
 
       {topRated.length > 0 && (
