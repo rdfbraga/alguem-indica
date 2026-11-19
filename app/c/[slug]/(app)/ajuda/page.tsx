@@ -1,12 +1,19 @@
 import { requireMember } from "@/lib/condo";
-import { KIND_BY_VALUE, STATUS_LABELS } from "@/lib/feedback";
+import { KIND_BY_VALUE, STATUS_LABELS, parseFeedbackKind } from "@/lib/feedback";
 import type { FeedbackRow } from "@/lib/types";
 import { FeedbackForm } from "./FeedbackForm";
 
 export const metadata = { title: "Ajuda — Alguém indica?" };
 
-export default async function Ajuda({ params }: { params: Promise<{ slug: string }> }) {
+export default async function Ajuda({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ tipo?: string; msg?: string }>;
+}) {
   const { slug } = await params;
+  const sp = await searchParams;
   const { user, supabase, condo } = await requireMember(slug);
   const { data } = await supabase
     .from("feedback")
@@ -24,7 +31,7 @@ export default async function Ajuda({ params }: { params: Promise<{ slug: string
         <p className="muted">Dúvidas, problemas ou ideias para melhorar o app. A gente responde por aqui.</p>
       </header>
 
-      <FeedbackForm slug={slug} defaultContact={user.email ?? ""} />
+      <FeedbackForm slug={slug} defaultContact={user.email ?? ""} defaultKind={parseFeedbackKind(sp.tipo) ?? "suporte"} defaultMessage={(sp.msg ?? "").slice(0, 300)} />
 
       {mine.length > 0 && (
         <section className="space-y-3">

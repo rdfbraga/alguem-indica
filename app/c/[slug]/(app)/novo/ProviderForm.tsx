@@ -4,6 +4,7 @@ import { createProvider } from "../../actions";
 import { createClient } from "@/lib/supabase/client";
 import type { Category, FormState } from "@/lib/types";
 import type { GroupLike, Section } from "@/lib/groups";
+import { CategoryPicker } from "@/components/CategoryPicker";
 
 async function resizeImage(file: File, max = 800): Promise<Blob> {
   const bmp = await createImageBitmap(file);
@@ -28,12 +29,12 @@ export function ProviderForm({
 }) {
   const [state, action, pending] = useActionState<FormState, FormData>(createProvider.bind(null, slug), undefined);
   const [kind, setKind] = useState<"resident" | "external">("external");
-  const [categoryId, setCategoryId] = useState("");
+  const [categoryIds, setCategoryIds] = useState<number[]>([]);
   const [photoUrl, setPhotoUrl] = useState("");
   const [uploading, setUploading] = useState(false);
   const [photoError, setPhotoError] = useState("");
 
-  const isOther = sections.flatMap((s) => s.categories).find((c) => String(c.id) === categoryId)?.slug === "outros";
+  const isOther = sections.flatMap((s) => s.categories).some((c) => categoryIds.includes(c.id) && c.slug === "outros");
 
   async function onPhoto(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -61,15 +62,9 @@ export function ProviderForm({
         <input id="name" name="name" required maxLength={80} className="input" placeholder="Ex.: João Silva" />
       </div>
       <div>
-        <label className="label" htmlFor="category_id">Categoria</label>
-        <select id="category_id" name="category_id" required value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className="input">
-          <option value="" disabled>Escolha…</option>
-          {sections.map((sec) => (
-            <optgroup key={sec.group.id} label={`${sec.group.icon} ${sec.group.name}`}>
-              {sec.categories.map((c) => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
-            </optgroup>
-          ))}
-        </select>
+        <span className="label">Categoria</span>
+        <CategoryPicker sections={sections} value={categoryIds} onChange={setCategoryIds} />
+        <p className="mt-1 text-xs text-navy/60">Faz mais de um tipo de serviço? Adicione até 3 categorias no mesmo perfil.</p>
       </div>
       {isOther && (
         <div>
@@ -115,7 +110,7 @@ export function ProviderForm({
         Ao indicar, você confirma que tem autorização para divulgar o contato deste profissional. Evite incluir dados pessoais além do WhatsApp.
       </p>
       {state?.error && <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{state.error}</p>}
-      <button disabled={pending || uploading} className="btn w-full">{pending ? "Publicando…" : "Publicar indicação"}</button>
+      <button disabled={pending || uploading || categoryIds.length === 0} className="btn w-full">{pending ? "Publicando…" : "Publicar indicação"}</button>
     </form>
   );
 }

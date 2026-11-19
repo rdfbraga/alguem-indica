@@ -20,13 +20,18 @@ export default async function Categoria({
   const { condo, supabase } = await requireMember(slug);
   const { data: category } = await supabase.from("categories").select("*").eq("slug", cat).maybeSingle();
   if (!category) notFound();
-  const { data } = await supabase
+  // Um perfil aparece em todas as suas categorias. (Se a migration 0007 ainda não rodou, usa só a principal.)
+  let res = await supabase
     .from("provider_listing")
     .select("*")
     .eq("condo_id", condo.id)
-    .eq("category_slug", cat)
+    .contains("category_slugs", [cat])
     .eq("status", "active")
     .limit(300);
+  if (res.error) {
+    res = await supabase.from("provider_listing").select("*").eq("condo_id", condo.id).eq("category_slug", cat).eq("status", "active").limit(300);
+  }
+  const data = res.data;
   const all = (data ?? []) as ProviderRow[];
   const providers = sortProviders(filterKind(all, kind), order);
   const c = category as Category;

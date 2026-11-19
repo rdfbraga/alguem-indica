@@ -20,6 +20,11 @@ export type ProviderRow = {
   block: string | null;
   custom_category: string | null;
   custom_category_reviewed: boolean;
+  created_by?: string;
+  category_id?: number;
+  category_ids?: number[] | null;
+  category_slugs?: string[] | null;
+  category_names?: string[] | null;
   status: "active" | "hidden";
   flagged: boolean;
   flag_reason: string | null;

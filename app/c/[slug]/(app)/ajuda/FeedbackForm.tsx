@@ -4,10 +4,20 @@ import { submitFeedback } from "../../actions";
 import { FEEDBACK_KINDS, MESSAGE_MAX, type FeedbackKind } from "@/lib/feedback";
 import type { FormState } from "@/lib/types";
 
-export function FeedbackForm({ slug, defaultContact }: { slug: string; defaultContact: string }) {
+export function FeedbackForm({
+  slug,
+  defaultContact,
+  defaultKind = "suporte",
+  defaultMessage = "",
+}: {
+  slug: string;
+  defaultContact: string;
+  defaultKind?: FeedbackKind;
+  defaultMessage?: string;
+}) {
   const [state, action, pending] = useActionState<FormState, FormData>(submitFeedback.bind(null, slug), undefined);
-  const [kind, setKind] = useState<FeedbackKind>("suporte");
-  const [text, setText] = useState("");
+  const [kind, setKind] = useState<FeedbackKind>(defaultKind);
+  const [text, setText] = useState(defaultMessage);
 
   if (state?.ok) {
     return (

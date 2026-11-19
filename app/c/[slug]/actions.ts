@@ -7,6 +7,7 @@ import { getCondo, getUser, requireAdmin, requireMember } from "@/lib/condo";
 import { normalizeWhatsapp } from "@/lib/phone";
 import type { FormState } from "@/lib/types";
 import { parseFeedbackKind, validateMessage } from "@/lib/feedback";
+import { MAX_CATEGORIES, parseCategoryIds } from "@/lib/categories";
 
 const str = (fd: FormData, k: string) => String(fd.get(k) ?? "").trim();
 
@@ -32,51 +33,101 @@ export async function completeOnboarding(slug: string, _: FormState, fd: FormDat
   redirect(`/c/${slug}`);
 }
 
+/** Valida categorias (1 a 3) e o texto de "Outros". Devolve os ids na ordem (a primeira é a principal). */
+async function readCategories(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  fd: FormData,
+): Promise<{ ok: true; ids: number[]; custom: string; hasOther: boolean } | { ok: false; error: string }> {
+  const ids = parseCategoryIds(fd.getAll("category_id"));
+  if (ids.length < 1) return { ok: false, error: "Escolha uma categoria." };
+  if (ids.length > MAX_CATEGORIES) return { ok: false, error: `Escolha no máximo ${MAX_CATEGORIES} categorias.` };
+  const { data: cats } = await supabase.from("categories").select("id,slug").in("id", ids);
+  if (!cats || cats.length !== ids.length) return { ok: false, error: "Categoria inválida." };
+  const hasOther = cats.some((c) => c.slug === "outros");
+  const custom = str(fd, "custom_category").replace(/\s+/g, " ");
+  if (hasOther && (custom.length < 2 || custom.length > 40)) {
+    return { ok: false, error: "Diga qual é o serviço em “Outros” (de 2 a 40 letras). Ex.: Dedetização." };
+  }
+  return { ok: true, ids, custom: hasOther ? custom : "", hasOther };
+}
+
 export async function createProvider(slug: string, _: FormState, fd: FormData): Promise<FormState> {
   const { condo, user, member, supabase } = await requireMember(slug);
   const name = str(fd, "name");
   const description = str(fd, "description");
-  const category_id = Number(fd.get("category_id"));
   const kind = str(fd, "kind");
   const photo_url = str(fd, "photo_url") || null;
-  const custom = str(fd, "custom_category").replace(/\s+/g, " ");
   const whatsapp = normalizeWhatsapp(str(fd, "whatsapp"));
   if (name.length < 2) return { error: "Informe o nome do prestador." };
-  if (!Number.isInteger(category_id) || category_id <= 0) return { error: "Escolha uma categoria." };
   if (kind !== "resident" && kind !== "external") return { error: "Informe se é morador ou externo." };
   if (!whatsapp) return { error: "WhatsApp inválido. Use o formato (11) 99999-8888." };
   if (description.length > 500) return { error: "A descrição deve ter até 500 caracteres." };
   if (photo_url && !photo_url.includes("/provider-photos/")) return { error: "Foto inválida." };
-
-  const { data: cat } = await supabase.from("categories").select("slug").eq("id", category_id).maybeSingle();
-  if (!cat) return { error: "Categoria inválida." };
-  const isOther = cat.slug === "outros";
-  if (isOther && (custom.length < 2 || custom.length > 40)) {
-    return { error: "Diga qual é a categoria (de 2 a 40 letras). Ex.: Dedetização." };
-  }
-  const custom_category = isOther ? custom : null;
+  const cats = await readCategories(supabase, fd);
+  if (!cats.ok) return { error: cats.error };
 
   const block = kind === "resident" ? str(fd, "block") || member.block : null;
   const { data, error } = await supabase
     .from("providers")
-    .insert({ condo_id: condo.id, category_id, created_by: user.id, name, description, whatsapp, photo_url, kind, block, ...(custom_category ? { custom_category } : {}) })
+    .insert({
+      condo_id: condo.id, category_id: cats.ids[0], created_by: user.id, name, description, whatsapp, photo_url, kind, block,
+      ...(cats.hasOther ? { custom_category: cats.custom } : {}),
+    })
     .select("id")
     .single();
   if (error) {
     if (error.code === "23505") {
+      // Mesmo WhatsApp: leva ao perfil existente; se a categoria pedida ainda não está lá, oferece incluí-la.
       const { data: existing } = await supabase
-        .from("providers")
-        .select("id, name")
-        .eq("condo_id", condo.id)
-        .eq("whatsapp", whatsapp)
-        .maybeSingle();
-      if (existing) redirect(`/c/${slug}/p/${existing.id}?jaexiste=1`);
+        .from("providers").select("id, category_id").eq("condo_id", condo.id).eq("whatsapp", whatsapp).maybeSingle();
+      if (existing) {
+        const { data: have } = await supabase.from("provider_categories").select("category_id").eq("provider_id", existing.id);
+        const haveIds = new Set([existing.category_id, ...((have ?? []).map((h) => h.category_id as number))]);
+        const missing = cats.ids.filter((id) => !haveIds.has(id));
+        redirect(`/c/${slug}/p/${existing.id}?jaexiste=1${missing.length ? `&addcat=${missing.join(",")}` : ""}`);
+      }
       return { error: "Este WhatsApp já está cadastrado (possivelmente oculto)." };
     }
-    return { error: "Não foi possível salvar. Tente novamente." };
+    return { error: "Não foi possível salvar. Tente de novo." };
+  }
+  if (cats.ids.length > 1 || cats.hasOther) {
+    const { error: rpcError } = await supabase.rpc("set_provider_categories", {
+      p_provider: data.id, p_category_ids: cats.ids, p_custom: cats.custom || null,
+    });
+    if (rpcError) console.error("set_provider_categories", rpcError); // o perfil já existe com a categoria principal
   }
   revalidatePath(`/c/${slug}`, "layout");
   redirect(`/c/${slug}/p/${data.id}?novo=1`);
+}
+
+/** Troca as categorias de um perfil (autor ou admin). Devolve texto de erro em português ou null. */
+async function saveCategories(slug: string, providerId: string, fd: FormData): Promise<string | null> {
+  const { supabase } = await requireMember(slug);
+  if (!UUID.test(providerId)) return "Perfil inválido.";
+  const cats = await readCategories(supabase, fd);
+  if (!cats.ok) return cats.error;
+  const { error } = await supabase.rpc("set_provider_categories", {
+    p_provider: providerId, p_category_ids: cats.ids, p_custom: cats.custom || null,
+  });
+  if (error) {
+    if (error.message?.includes("sem permiss")) return "Só quem indicou este profissional ou a administração pode editar as categorias.";
+    if (error.message?.includes("custom_required")) return "Diga qual é o serviço em “Outros”.";
+    console.error("saveCategories", error);
+    return "Não foi possível salvar as categorias.";
+  }
+  revalidatePath(`/c/${slug}`, "layout");
+  return null;
+}
+
+export async function updateProviderCategories(slug: string, providerId: string, _: FormState, fd: FormData): Promise<FormState> {
+  const error = await saveCategories(slug, providerId, fd);
+  return error ? { error } : { ok: "Categorias atualizadas!" };
+}
+
+/** Usado pelo aviso "já cadastrado": inclui a categoria pedida e volta ao perfil. */
+export async function addCategoriesAndReturn(slug: string, providerId: string, fd: FormData) {
+  const error = await saveCategories(slug, providerId, fd);
+  redirect(`/c/${slug}/p/${providerId}${error ? `?catsErro=1` : "?catsOk=1"}`);
 }
 
 export async function submitReview(slug: string, providerId: string, _: FormState, fd: FormData): Promise<FormState> {
@@ -166,11 +217,7 @@ export async function adminMoveToCategory(slug: string, fd: FormData) {
   const ids = idsFrom(fd);
   const category_id = Number(fd.get("category_id"));
   if (!ids.length || !Number.isInteger(category_id) || category_id <= 0) return;
-  await supabase
-    .from("providers")
-    .update({ category_id, custom_category: null, custom_category_reviewed: false })
-    .in("id", ids)
-    .eq("condo_id", condo.id);
+  await supabase.rpc("replace_other_category", { p_condo: condo.id, p_provider_ids: ids, p_category_id: category_id });
   revalidatePath(`/c/${slug}`, "layout");
 }
 

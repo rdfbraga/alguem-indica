@@ -1,7 +1,7 @@
 -- ============================================================================
 -- DADOS DE TESTE do Alguém indica? — rode no SQL Editor do Supabase.
 --  * Cria ~170 prestadores (3 a 4 por categoria, nas ~50 categorias) e 15 vizinhos FICTÍCIOS que avaliam.
---  * Requer as migrations 0004 e 0005 (categorias novas). Alguns ficam em "Outros" com categoria sugerida.
+--  * Requer as migrations 0004, 0005 e 0007 (categorias novas e várias categorias por perfil). Alguns ficam em "Outros" com categoria sugerida.
 --  * Usa o condomínio mais antigo cadastrado (troque v_slug para escolher outro).
 --  * Pode rodar de novo: apaga os dados de teste anteriores antes de recriar.
 --  * Para remover tudo depois: rode supabase/dev/test_data_cleanup.sql.
@@ -250,6 +250,22 @@ begin
       values (v_condo, p.id, r.uid, '', v_rating, v_comment, now() - (random() * 30 || ' days')::interval);
     end loop;
   end loop;
+
+  -- perfis que atendem mais de uma categoria (até 3): categorias extras além da principal
+  insert into public.provider_categories (provider_id, category_id, condo_id)
+  select pr.id, c.id, v_condo
+    from (values
+      ('Paulo Encanador','eletricista'),('Paulo Encanador','pedreiro'),
+      ('Fábio Instalações','montador'),('Eletro Rápido do Zé','ar-condicionado'),
+      ('Alê Marceneiro','montador'),('Marcelo Alvenaria','pintor'),('Marcelo Alvenaria','gesseiro'),
+      ('Seu Joaquim Hidráulica','pedreiro'),('Nete Passadeira','diarista'),
+      ('Camila Pilates','fisioterapeuta'),('Dra. Beatriz Fisioterapia','cuidador'),
+      ('Barbeiro Léo','cabeleireiro'),('Chef Marcelo em Casa','marmita'),
+      ('Wi-Fi Fácil','tecnico'),('Câmeras Seguras','eletricista')
+    ) as e(nm, slug)
+    join public.providers pr on pr.name = e.nm and pr.created_by = any (v_user_ids)
+    join public.categories c on c.slug = e.slug
+  on conflict do nothing;
 
   raise notice 'Pronto: % prestadores e % avaliações de teste.',
     (select count(*) from public.providers where created_by = any (v_user_ids)),
