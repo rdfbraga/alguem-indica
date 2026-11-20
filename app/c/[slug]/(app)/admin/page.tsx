@@ -78,6 +78,11 @@ export default async function Admin({
   const adStats = new Map(((adStatData ?? []) as AdStat[]).map((a) => [a.id, a]));
   const editingAd = sp.anuncio ? ads.find((a) => a.id === sp.anuncio) : undefined;
 
+  // Especialidades escritas pelos moradores, aguardando análise
+  const { count: specPending } = await supabase
+    .from("providers").select("id", { count: "exact", head: true })
+    .eq("condo_id", condo.id).not("custom_specialty", "is", null).eq("custom_specialty_reviewed", false);
+
   const { data: fbData } = await supabase
     .from("feedback").select("*").eq("condo_id", condo.id)
     .order("created_at", { ascending: false }).limit(60);
@@ -370,6 +375,18 @@ export default async function Admin({
         })}
         {suggestions.length === 0 && <p className="text-sm text-navy/60">Nenhuma sugestão pendente.</p>}
       </section>
+
+      <Link href={`/c/${slug}/admin/especialidades`} className="card flex items-center gap-3 transition hover:border-brand-500">
+        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-50 text-xl">🩺</span>
+        <span className="min-w-0 flex-1">
+          <b>Especialidades</b>
+          <span className="block text-sm text-navy/65">
+            {(specPending ?? 0) > 0 ? `${specPending} ${specPending === 1 ? "sugestão aguardando" : "sugestões aguardando"} análise · ` : ""}Gerenciar a lista
+          </span>
+        </span>
+        {(specPending ?? 0) > 0 && <span className="rounded-full bg-brand-500 px-2 py-0.5 text-xs font-bold text-white">{specPending}</span>}
+        <span className="text-navy/40" aria-hidden>›</span>
+      </Link>
 
       <section className="space-y-3">
         <h2 className="font-semibold">⚠️ Possíveis duplicidades / inconsistências ({(flagged ?? []).length})</h2>

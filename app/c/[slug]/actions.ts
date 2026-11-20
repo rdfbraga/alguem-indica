@@ -542,3 +542,72 @@ export async function adminDeleteAd(slug: string, adId: string) {
   await supabase.from("ads").delete().eq("id", adId).eq("condo_id", condo.id);
   revalidatePath(`/c/${slug}`, "layout");
 }
+
+// ─── Especialidades (Admin): lista e sugestões dos moradores ───
+export async function adminSaveSpecialty(slug: string, specialtyId: number | null, _: FormState, fd: FormData): Promise<FormState> {
+  const { condo, supabase } = await requireAdmin(slug);
+  const category_id = Number(fd.get("category_id"));
+  const name = str(fd, "name");
+  if (!Number.isInteger(category_id) || category_id <= 0) return { error: "Escolha a categoria." };
+  if (name.length < 2 || name.length > 60) return { error: "O nome deve ter de 2 a 60 letras." };
+  const { error } = await supabase.rpc("admin_save_specialty", {
+    p_condo: condo.id, p_id: specialtyId, p_category_id: category_id, p_name: name, p_keywords: str(fd, "keywords").slice(0, 300),
+  });
+  if (error) {
+    if (error.message?.includes("already_exists")) return { error: "Já existe uma especialidade com esse nome nesta categoria." };
+    console.error("adminSaveSpecialty", error);
+    return { error: "Não foi possível salvar a especialidade." };
+  }
+  revalidatePath(`/c/${slug}`, "layout");
+  return { ok: specialtyId ? "Especialidade atualizada!" : "Especialidade criada!" };
+}
+
+export async function adminDeleteSpecialty(slug: string, specialtyId: number) {
+  const { condo, supabase } = await requireAdmin(slug);
+  const { error } = await supabase.rpc("admin_delete_specialty", { p_condo: condo.id, p_id: specialtyId });
+  revalidatePath(`/c/${slug}`, "layout");
+  if (error?.message?.includes("in_use_elsewhere")) redirect(`/c/${slug}/admin/especialidades?erro=em-uso`);
+  if (error) console.error("adminDeleteSpecialty", error);
+}
+
+/** Cria a especialidade sugerida (ou reaproveita a de mesmo nome) e a atribui aos perfis do grupo. */
+export async function adminApproveSpecialty(slug: string, fd: FormData) {
+  const { condo, supabase } = await requireAdmin(slug);
+  const ids = idsFrom(fd);
+  const category_id = Number(fd.get("category_id"));
+  if (!ids.length || !Number.isInteger(category_id) || category_id <= 0) return;
+  const { error } = await supabase.rpc("approve_specialty", {
+    p_condo: condo.id, p_category_id: category_id, p_name: str(fd, "name"), p_keywords: str(fd, "keywords").slice(0, 300), p_provider_ids: ids,
+  });
+  if (error) console.error("adminApproveSpecialty", error);
+  revalidatePath(`/c/${slug}`, "layout");
+}
+
+/** Atribui uma especialidade que já existe aos perfis do grupo. */
+export async function adminAssignSpecialty(slug: string, fd: FormData) {
+  const { condo, supabase } = await requireAdmin(slug);
+  const ids = idsFrom(fd);
+  const specialty_id = Number(fd.get("specialty_id"));
+  if (!ids.length || !Number.isInteger(specialty_id) || specialty_id <= 0) return;
+  const { error } = await supabase.rpc("assign_specialty", { p_condo: condo.id, p_specialty_id: specialty_id, p_provider_ids: ids });
+  if (error) console.error("adminAssignSpecialty", error);
+  revalidatePath(`/c/${slug}`, "layout");
+}
+
+/** Mantém o texto como está (etiqueta livre) e tira da fila. */
+export async function adminDismissSpecialtyText(slug: string, fd: FormData) {
+  const { condo, supabase } = await requireAdmin(slug);
+  const ids = idsFrom(fd);
+  if (!ids.length) return;
+  await supabase.from("providers").update({ custom_specialty_reviewed: true }).in("id", ids).eq("condo_id", condo.id);
+  revalidatePath(`/c/${slug}`, "layout");
+}
+
+/** Apaga o texto (spam, ofensa, erro). */
+export async function adminClearSpecialtyText(slug: string, fd: FormData) {
+  const { condo, supabase } = await requireAdmin(slug);
+  const ids = idsFrom(fd);
+  if (!ids.length) return;
+  await supabase.from("providers").update({ custom_specialty: null, custom_specialty_reviewed: false }).in("id", ids).eq("condo_id", condo.id);
+  revalidatePath(`/c/${slug}`, "layout");
+}

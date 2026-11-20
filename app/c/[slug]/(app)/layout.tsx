@@ -20,7 +20,10 @@ export default async function AppLayout({
     const { count: claimCount } = await supabase
       .from("profile_claims").select("id", { count: "exact", head: true })
       .eq("condo_id", condo.id).eq("status", "pending");
-    newMessages = (count ?? 0) + (claimCount ?? 0);
+    const { count: specCount } = await supabase
+      .from("providers").select("id", { count: "exact", head: true })
+      .eq("condo_id", condo.id).not("custom_specialty", "is", null).eq("custom_specialty_reviewed", false);
+    newMessages = (count ?? 0) + (claimCount ?? 0) + (specCount ?? 0);
   }
   return (
     <div className="mx-auto min-h-screen max-w-2xl pb-24">
