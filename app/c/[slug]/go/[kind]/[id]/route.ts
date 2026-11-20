@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { getCondo, getFeatures, getUser } from "@/lib/condo";
+import { getCondo, getFeatures, getScope, getUser } from "@/lib/condo";
 import { createClient } from "@/lib/supabase/server";
 import { whatsappLink } from "@/lib/phone";
 import { instagramUrl } from "@/lib/links";
@@ -47,7 +47,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   }
 
   const { data: p } = await supabase
-    .from("provider_listing").select("name,whatsapp,instagram,website,category_slug").eq("id", id).eq("condo_id", condo.id).maybeSingle();
+    .from("provider_listing").select("name,whatsapp,instagram,website,category_slug").eq("id", id).in("condo_id", await getScope(condo.id)).maybeSingle();
   if (!p) return back(`/c/${slug}`);
 
   let target: string | null = null;
@@ -64,7 +64,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   }
   if (!target) return back(`/c/${slug}/p/${id}`);
 
-  await supabase.rpc("log_provider_event", { p_provider: id, p_kind: kind }); // erros não impedem o redirecionamento
+  await supabase.rpc("log_provider_event", { p_provider: id, p_kind: kind, p_viewer_condo: condo.id }); // erros não impedem o redirecionamento
   const res = NextResponse.redirect(target, 302);
   res.headers.set("Cache-Control", "no-store");
   res.headers.set("Referrer-Policy", "no-referrer");

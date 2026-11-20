@@ -35,3 +35,12 @@ test("filtro por tipo e parsing de parâmetros", () => {
   assert.equal(parseKind("morador"), "morador");
   assert.equal(parseKind("x"), "todos");
 });
+
+test("prioriza o próprio condomínio só entre notas parecidas", () => {
+  const mkc = (id: string, condo: string, avg: number, n: number): ProviderRow =>
+    ({ id, condo_id: condo, avg_rating: avg, review_count: n, created_at: "2026-01-01" } as unknown as ProviderRow);
+  const near = sortProviders([mkc("fora", "B", 4.6, 10), mkc("aqui", "A", 4.5, 10)], "melhores", undefined, "A");
+  assert.equal(near[0].id, "aqui");
+  const far = sortProviders([mkc("fora", "B", 5, 40), mkc("aqui", "A", 4.0, 10)], "melhores", undefined, "A");
+  assert.equal(far[0].id, "fora");
+});

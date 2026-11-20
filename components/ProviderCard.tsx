@@ -4,7 +4,8 @@ import { Stars } from "./Stars";
 import { providerCategoryLabels } from "@/lib/categories";
 import { providerSpecialtyLabels } from "@/lib/specialties";
 
-export function ProviderCard({ slug, p, planBadge = false }: { slug: string; p: ProviderRow; planBadge?: boolean }) {
+export function ProviderCard({ slug, p, planBadge = false, viewerCondoId }: { slug: string; p: ProviderRow; planBadge?: boolean; viewerCondoId?: string }) {
+  const foreign = Boolean(viewerCondoId && p.condo_id !== viewerCondoId);   // indicado em outro condomínio da região
   return (
     <Link href={`/c/${slug}/p/${p.id}`} className="card flex items-center gap-3 transition hover:-translate-y-0.5 hover:border-brand-500">
       {p.photo_url ? (
@@ -19,9 +20,10 @@ export function ProviderCard({ slug, p, planBadge = false }: { slug: string; p: 
         <div className="truncate font-extrabold">{p.name}{planBadge && p.plan_active ? <span className="ml-1.5 rounded-full bg-brand-50 px-1.5 py-0.5 align-middle text-[10px] font-bold text-brand-700">⭐ Destaque</span> : null}</div>
         <div className="truncate text-sm text-navy/60">
           {providerCategoryLabels(p).join(" · ")}
-          {p.kind === "resident" ? ` · Morador${p.block ? ` (Bloco ${p.block})` : ""}` : " · Externo indicado"}
+          {p.kind === "resident" ? ` · Morador${p.block && !foreign ? ` (Bloco ${p.block})` : ""}` : " · Externo indicado"}
           {p.self_pending ? " · Cadastro próprio" : ""}
         </div>
+        {foreign && <div className="truncate text-xs font-semibold text-sky-brand">📍 {p.condo_name ?? "Condomínio vizinho"}</div>}
         {providerSpecialtyLabels(p).length > 0 && (
           <div className="truncate text-xs font-semibold text-brand-700">{providerSpecialtyLabels(p).join(" · ")}</div>
         )}

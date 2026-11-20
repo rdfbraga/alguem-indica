@@ -39,20 +39,24 @@ export function filterKind<T extends Pick<ProviderRow, "kind">>(list: T[], kind:
   return kind === "todos" ? list : list.filter((p) => p.kind === (kind === "morador" ? "resident" : "external"));
 }
 
-/** `scores` (relevância da busca) só é usado quando order === "relevancia". */
-export function sortProviders(list: ProviderRow[], order: Order, scores?: Map<string, number>): ProviderRow[] {
+/** Pequeno empurrão para quem é do próprio condomínio (só desempata notas parecidas; nunca passa por cima de uma nota claramente melhor). */
+export const LOCAL_BONUS = 0.15;
+
+/** `scores` (relevância da busca) só é usado quando order === "relevancia". `localCondoId` favorece os do próprio condomínio. */
+export function sortProviders(list: ProviderRow[], order: Order, scores?: Map<string, number>, localCondoId?: string): ProviderRow[] {
+  const bonus = (p: ProviderRow) => (localCondoId && p.condo_id === localCondoId ? LOCAL_BONUS : 0);
   const byDate = (a: ProviderRow, b: ProviderRow) => (a.created_at < b.created_at ? 1 : a.created_at > b.created_at ? -1 : 0);
   const out = [...list];
   out.sort((a, b) => {
     switch (order) {
       case "relevancia":
-        return (scores?.get(b.id) ?? 0) - (scores?.get(a.id) ?? 0) || bayesScore(b) - bayesScore(a) || byDate(a, b);
+        return (scores?.get(b.id) ?? 0) + bonus(b) / 3 - ((scores?.get(a.id) ?? 0) + bonus(a) / 3) || bayesScore(b) - bayesScore(a) || byDate(a, b);
       case "avaliados":
         return b.review_count - a.review_count || bayesScore(b) - bayesScore(a) || byDate(a, b);
       case "recentes":
         return byDate(a, b);
       default:
-        return bayesScore(b) - bayesScore(a) || b.review_count - a.review_count || byDate(a, b);
+        return (bayesScore(b) > 0 ? bayesScore(b) + bonus(b) : bayesScore(b)) - (bayesScore(a) > 0 ? bayesScore(a) + bonus(a) : bayesScore(a)) || b.review_count - a.review_count || byDate(a, b);
     }
   });
   return out;

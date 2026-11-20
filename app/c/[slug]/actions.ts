@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { getCondo, getUser, requireAdmin, requireMember } from "@/lib/condo";
+import { getCondo, getScope, getUser, requireAdmin, requireMember } from "@/lib/condo";
 import { normalizeWhatsapp } from "@/lib/phone";
 import { normalizeInstagram, normalizeWebsite } from "@/lib/links";
 import type { FormState } from "@/lib/types";
@@ -104,7 +104,7 @@ export async function createProvider(slug: string, _: FormState, fd: FormData): 
     if (error.code === "23505") {
       // Mesmo WhatsApp: leva ao perfil existente; se a categoria pedida ainda não está lá, oferece incluí-la.
       const { data: existing } = await supabase
-        .from("providers").select("id, category_id").eq("condo_id", condo.id).eq("whatsapp", whatsapp).maybeSingle();
+        .from("providers").select("id, category_id").in("condo_id", await getScope(condo.id)).eq("whatsapp", whatsapp).maybeSingle();
       if (existing) {
         const { data: have } = await supabase.from("provider_categories").select("category_id").eq("provider_id", existing.id);
         const haveIds = new Set([existing.category_id, ...((have ?? []).map((h) => h.category_id as number))]);
@@ -179,9 +179,11 @@ export async function submitReview(slug: string, providerId: string, _: FormStat
   const comment = str(fd, "comment");
   if (!Number.isInteger(rating) || rating < 1 || rating > 5) return { error: "Escolha uma nota de 1 a 5." };
   if (comment.length > 600) return { error: "O comentário deve ter até 600 caracteres." };
+  // A avaliação fica no condomínio do prestador (que pode ser outro da região).
+  const { data: target } = await supabase.from("providers").select("condo_id").eq("id", providerId).maybeSingle();
   const { error } = await supabase
     .from("reviews")
-    .insert({ condo_id: condo.id, provider_id: providerId, author_id: user.id, rating, comment, author_label: "" });
+    .insert({ condo_id: target?.condo_id ?? condo.id, provider_id: providerId, author_id: user.id, rating, comment, author_label: "" });
   if (error) {
     if (error.code === "23505") return { error: "Você já avaliou este prestador." };
     return { error: "Não foi possível enviar sua avaliação." };
@@ -197,8 +199,17 @@ export async function reportItem(slug: string, _: FormState, fd: FormData): Prom
   const reason = str(fd, "reason");
   if (reason.length < 3) return { error: "Descreva brevemente o problema." };
   if (target !== "provider" && target !== "review") return { error: "Alvo inválido." };
+  // A denúncia vai para o condomínio do prestador (ou do prestador avaliado), que é quem modera.
+  let targetCondo: string = condo.id;
+  if (target === "provider") {
+    const { data: t } = await supabase.from("providers").select("condo_id").eq("id", id).maybeSingle();
+    if (t?.condo_id) targetCondo = t.condo_id as string;
+  } else {
+    const { data: t } = await supabase.from("reviews").select("condo_id").eq("id", id).maybeSingle();
+    if (t?.condo_id) targetCondo = t.condo_id as string;
+  }
   const { error } = await supabase.from("reports").insert({
-    condo_id: condo.id,
+    condo_id: targetCondo,
     reporter_id: user.id,
     reason,
     provider_id: target === "provider" ? id : null,

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireMember } from "@/lib/condo";
+import { getScope, requireMember } from "@/lib/condo";
 import { PERIODS, parsePeriod, type ProviderStats } from "@/lib/stats";
 import { ResultsCard } from "@/components/ResultsCard";
 
@@ -27,7 +27,7 @@ export default async function Resultados({
   } else {
     const { data } = await supabase
       .from("providers").select("id,name,instagram,website")
-      .eq("condo_id", condo.id).eq("owner_id", user.id).order("name").limit(5);
+      .in("condo_id", await getScope(condo.id)).eq("owner_id", user.id).order("name").limit(5);
     profiles = (data ?? []) as Owned[];
   }
 

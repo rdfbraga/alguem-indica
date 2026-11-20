@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getFeatures, requireMember } from "@/lib/condo";
+import { getFeatures, getScope, requireMember } from "@/lib/condo";
 import { formatWhatsapp } from "@/lib/phone";
 import { instagramUrl, websiteLabel } from "@/lib/links";
+import { reviewAuthorLabel } from "@/lib/regions";
 import { ViewTracker } from "@/components/ViewTracker";
 import type { ProviderStats } from "@/lib/stats";
 import type { Category, CategoryGroup, PhotoRow, ProviderRow, ReviewRow, ServiceRow } from "@/lib/types";
@@ -36,9 +37,12 @@ export default async function Prestador({
   const { condo, user, member, supabase } = await requireMember(slug, `/c/${slug}/p/${id}`);
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
 
-  const { data } = await supabase.from("provider_listing").select("*").eq("id", id).eq("condo_id", condo.id).maybeSingle();
+  const scope = await getScope(condo.id);   // este condomínio + os da mesma região
+  const { data } = await supabase.from("provider_listing").select("*").eq("id", id).in("condo_id", scope).maybeSingle();
   if (!data) notFound();
   const p = data as ProviderRow;
+  const foreign = p.condo_id !== condo.id;   // indicado em outro condomínio da região: sem bloco/unidade, sem ações de admin
+  const adminHere = member.role === "admin" && !foreign;
   const { data: rs } = await supabase
     .from("reviews").select("*").eq("provider_id", id).eq("status", "visible").order("created_at", { ascending: false });
   const reviews = (rs ?? []) as ReviewRow[];
@@ -47,10 +51,10 @@ export default async function Prestador({
   // Categorias: só autor/admin editam. O aviso "já cadastrado" pode sugerir incluir uma categoria nova.
   // Com dono, só o dono (e o admin) editam; sem dono, quem indicou.
   const isOwner = p.owner_id === user.id;
-  const canEdit = member.role === "admin" || (p.owner_id ? isOwner : p.created_by === user.id);
+  const canEdit = adminHere || (p.owner_id ? isOwner : p.created_by === user.id);
   // Resultados (últimos 7 dias): só para o dono e o admin.
   let weekStats: ProviderStats | null = null;
-  if (isOwner || member.role === "admin") {
+  if (isOwner || adminHere) {
     const { data: ws } = await supabase.rpc("provider_stats", { p_provider: id, p_days: 7 });
     weekStats = (ws ?? null) as ProviderStats | null;
   }
@@ -63,7 +67,7 @@ export default async function Prestador({
   }
   // Etapa 2: chaves, plano, vitrine e respostas (tudo desligado por padrão).
   const flags = await getFeatures(condo.id);
-  const isAdmin = member.role === "admin";
+  const isAdmin = adminHere;
   const planActive = p.plan_active === true;
   const canShowcase = premiumAvailable(flags, planActive, "showcase");
   const canReplyHere = isOwner && premiumAvailable(flags, planActive, "replies");
@@ -122,7 +126,7 @@ export default async function Prestador({
 
   return (
     <div className="space-y-4">
-      <ViewTracker providerId={p.id} />
+      <ViewTracker providerId={p.id} condoId={condo.id} />
       <Link href={`/c/${slug}/categoria/${p.category_slug}`} className="text-sm text-navy/60">← {p.category_name}</Link>
       {novo === "eu" ? (
         <div className="space-y-2 rounded-2xl bg-green-50 p-3 text-sm text-green-800">
@@ -199,8 +203,9 @@ export default async function Prestador({
                 ⏳ Cadastrado pelo próprio · aguardando confirmação
               </span>
             )}
+            {foreign && <div className="text-xs font-semibold text-sky-brand">📍 Indicado em {p.condo_name ?? "um condomínio vizinho"}</div>}
             <div className="text-sm text-navy/60">
-              {providerCategoryLabels(p).join(" · ")} · {p.kind === "resident" ? `Morador${p.block ? ` (Bloco ${p.block})` : ""}` : "Externo indicado por morador"}
+              {providerCategoryLabels(p).join(" · ")} · {p.kind === "resident" ? `Morador${p.block && !foreign ? ` (Bloco ${p.block})` : ""}` : "Externo indicado por morador"}
             </div>
             {providerSpecialtyLabels(p).length > 0 && (
               <div className="mt-1 flex flex-wrap gap-1">
@@ -269,14 +274,14 @@ export default async function Prestador({
         {!isOwner && !p.owner_id && (hasPendingClaim
           ? <p className="rounded-2xl bg-amber-50 p-3 text-sm text-amber-900">⏳ Seu pedido para assumir este perfil está em análise.</p>
           : <ClaimProfile slug={slug} providerId={p.id} />)}
-        {member.role === "admin" && (
+        {adminHere && (
           <form action={adminSetProviderStatus.bind(null, slug, p.id, p.status === "hidden" ? "active" : "hidden")}>
             <button className="btn-secondary !px-3 !py-2 !text-sm">
               {p.status === "hidden" ? "Admin: reexibir este perfil" : "Admin: ocultar este perfil"}
             </button>
           </form>
         )}
-        {member.role === "admin" && p.owner_id && (
+        {adminHere && p.owner_id && (
           <form action={adminClearOwner.bind(null, slug, p.id)}>
             <button className="text-xs font-semibold text-navy/50 underline">Admin: remover vínculo do dono</button>
           </form>
@@ -293,7 +298,7 @@ export default async function Prestador({
         {reviews.map((r) => (
           <div key={r.id} className="card space-y-1">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">{r.author_label}</span>
+              <span className="text-sm font-medium">{reviewAuthorLabel(r, p, condo.id)}</span>
               <Stars value={r.rating} size="text-sm" />
             </div>
             {r.comment && <p className="text-navy/80">{r.comment}</p>}
@@ -317,7 +322,7 @@ export default async function Prestador({
         ))}
         {reviews.length === 0 && <p className="text-sm text-navy/60">Seja o primeiro vizinho a avaliar.</p>}
       </section>
-      {member.role === "admin" && p.flagged && (
+      {adminHere && p.flagged && (
         <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-800">⚠️ Sinalizado: {p.flag_reason}</p>
       )}
     </div>

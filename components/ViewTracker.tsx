@@ -3,7 +3,7 @@ import { useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 /** Registra uma visita ao perfil (no máximo 1 a cada 30 min por aparelho). Silencioso: nunca mostra erro. */
-export function ViewTracker({ providerId }: { providerId: string }) {
+export function ViewTracker({ providerId, condoId }: { providerId: string; condoId?: string }) {
   useEffect(() => {
     const key = `view:${providerId}`;
     try {
@@ -13,7 +13,7 @@ export function ViewTracker({ providerId }: { providerId: string }) {
     } catch {
       /* sessionStorage indisponível: registra mesmo assim (o banco evita repetição) */
     }
-    createClient().rpc("log_provider_event", { p_provider: providerId, p_kind: "view" }).then(() => {}, () => {});
-  }, [providerId]);
+    createClient().rpc("log_provider_event", { p_provider: providerId, p_kind: "view", ...(condoId ? { p_viewer_condo: condoId } : {}) }).then(() => {}, () => {});
+  }, [providerId, condoId]);
   return null;
 }

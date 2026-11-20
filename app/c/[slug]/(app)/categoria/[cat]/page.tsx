@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getFeatures, requireMember } from "@/lib/condo";
+import { getFeatures, getScope, requireMember } from "@/lib/condo";
 import type { Category, ProviderRow } from "@/lib/types";
 import { filterKind, parseKind, parseOrder, sortProviders } from "@/lib/listing";
 import { ProviderCard } from "@/components/ProviderCard";
@@ -21,18 +21,19 @@ export default async function Categoria({
   const kind = parseKind(sp.tipo);
   const { condo, supabase } = await requireMember(slug);
   const flags = await getFeatures(condo.id);
+  const scope = await getScope(condo.id);
   const { data: category } = await supabase.from("categories").select("*").eq("slug", cat).maybeSingle();
   if (!category) notFound();
   // Um perfil aparece em todas as suas categorias. (Se a migration 0007 ainda não rodou, usa só a principal.)
   let res = await supabase
     .from("provider_listing")
     .select("*")
-    .eq("condo_id", condo.id)
+    .in("condo_id", scope)
     .contains("category_slugs", [cat])
     .eq("status", "active")
     .limit(300);
   if (res.error) {
-    res = await supabase.from("provider_listing").select("*").eq("condo_id", condo.id).eq("category_slug", cat).eq("status", "active").limit(300);
+    res = await supabase.from("provider_listing").select("*").in("condo_id", scope).eq("category_slug", cat).eq("status", "active").limit(300);
   }
   const data = res.data;
   const all = (data ?? []) as ProviderRow[];
@@ -41,7 +42,7 @@ export default async function Categoria({
   const { data: specData } = await supabase.from("specialties").select("id,category_id,slug,name").eq("category_id", c.id);
   const specOptions = specialtyCounts(all, (specData ?? []) as Specialty[]);
   const esp = parseSpecialtyFilter(sp.esp, specOptions);
-  const providers = sortProviders(filterBySpecialty(filterKind(all, kind), esp), order);
+  const providers = sortProviders(filterBySpecialty(filterKind(all, kind), esp), order, undefined, condo.id);
   const keep = { ordem: sp.ordem && order !== "melhores" ? order : undefined, tipo: kind !== "todos" ? kind : undefined };
   return (
     <div className="space-y-3">
@@ -53,7 +54,7 @@ export default async function Categoria({
       {all.length > 1 && (
         <ListControls base={`/c/${slug}/categoria/${cat}`} order={order} kind={kind} orders={["melhores", "avaliados", "recentes"]} extra={{ esp }} />
       )}
-      {providers.map((p) => <ProviderCard key={p.id} slug={slug} p={p} planBadge={flags.plans} />)}
+      {providers.map((p) => <ProviderCard key={p.id} slug={slug} p={p} planBadge={flags.plans} viewerCondoId={condo.id} />)}
       {providers.length === 0 && all.length > 0 && (
         <p className="card text-center text-navy/70">Ninguém neste filtro. Tente ver “Todos”.</p>
       )}

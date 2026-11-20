@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getFeatures, requireMember } from "@/lib/condo";
+import { getFeatures, getScope, requireMember } from "@/lib/condo";
 import type { Category, CategoryGroup, ProviderRow } from "@/lib/types";
 import { groupCategories } from "@/lib/groups";
 import { filterKind, parseKind, parseOrder, sortProviders } from "@/lib/listing";
@@ -39,6 +39,7 @@ export default async function Home({
   const { condo, user, member, supabase } = await requireMember(slug);
   const firstName = member.full_name.split(" ")[0];
   const flags = await getFeatures(condo.id);
+  const scope = await getScope(condo.id);   // este condomínio + os da mesma região
 
   const [{ data: catData }, { data: groupData }] = await Promise.all([
     supabase.from("categories").select("*").order("sort"),
@@ -56,14 +57,14 @@ export default async function Home({
     let results: ProviderRow[] = [];
     if (scores.size) {
       const { data } = await supabase.from("provider_listing").select("*").in("id", [...scores.keys()]);
-      results = sortProviders(filterKind((data ?? []) as ProviderRow[], kind), order, scores);
+      results = sortProviders(filterKind((data ?? []) as ProviderRow[], kind), order, scores, condo.id);
     }
     return (
       <div className="space-y-4">
         <SearchBox slug={slug} q={q} suggestions={suggestions} />
         <h2 className="font-extrabold">{results.length} resultado(s) para “{q}”</h2>
         <ListControls base={`/c/${slug}`} q={q} order={order} kind={kind} orders={["relevancia", "melhores", "avaliados", "recentes"]} />
-        {results.map((p) => <ProviderCard key={p.id} slug={slug} p={p} planBadge={flags.plans} />)}
+        {results.map((p) => <ProviderCard key={p.id} slug={slug} p={p} planBadge={flags.plans} viewerCondoId={condo.id} />)}
         {results.length === 0 && (
           <div className="card space-y-3 text-center text-navy/70">
             <p>Ninguém indicado para essa busca ainda. Conhece alguém?{" "}
@@ -87,7 +88,7 @@ export default async function Home({
   const { data: all } = await supabase
     .from("provider_listing")
     .select("*")
-    .eq("condo_id", condo.id)
+    .in("condo_id", scope)
     .eq("status", "active")
     .order("created_at", { ascending: false })
     .limit(200);
@@ -95,7 +96,7 @@ export default async function Home({
   // Sugestões da busca: também as especialidades que existem no condomínio.
   const usedSpecialties = [...new Set(providers.flatMap((p) => p.specialty_names ?? []))];
   const searchSuggestions = [...suggestions, ...usedSpecialties.filter((n) => !suggestions.includes(n))];
-  const topRated = sortProviders(providers.filter((p) => p.review_count > 0), "melhores").slice(0, 5);
+  const topRated = sortProviders(providers.filter((p) => p.review_count > 0), "melhores", undefined, condo.id).slice(0, 5);
   const topIds = new Set(topRated.map((p) => p.id));
   const newest = providers.filter((p) => !topIds.has(p.id)).slice(0, 5);
 
@@ -113,13 +114,13 @@ export default async function Home({
 
   const { count: ownedCount } = await supabase
     .from("providers").select("id", { count: "exact", head: true })
-    .eq("condo_id", condo.id).eq("owner_id", user.id);
+    .in("condo_id", scope).eq("owner_id", user.id);
 
   // Quem já cadastrou o próprio serviço e aguarda confirmação vê o andamento, e não o convite de novo.
   let pendingSelf: { id: string; name: string } | null = null;
   if ((ownedCount ?? 0) === 0) {
     const { data: mine } = await supabase
-      .from("provider_listing").select("id,name").eq("condo_id", condo.id).eq("created_by", user.id).eq("self_pending", true).limit(1);
+      .from("provider_listing").select("id,name").in("condo_id", scope).eq("created_by", user.id).eq("self_pending", true).limit(1);
     pendingSelf = (mine?.[0] as { id: string; name: string } | undefined) ?? null;
   }
 
@@ -168,13 +169,13 @@ export default async function Home({
       {topRated.length > 0 && (
         <section className="space-y-3">
           <h2 className="text-lg font-extrabold">⭐ Mais bem avaliados do condomínio</h2>
-          {topRated.map((p) => <ProviderCard key={p.id} slug={slug} p={p} planBadge={flags.plans} />)}
+          {topRated.map((p) => <ProviderCard key={p.id} slug={slug} p={p} planBadge={flags.plans} viewerCondoId={condo.id} />)}
         </section>
       )}
       {newest.length > 0 && (
         <section className="space-y-3">
           <h2 className="text-lg font-extrabold">🆕 Indicações recentes</h2>
-          {newest.map((p) => <ProviderCard key={p.id} slug={slug} p={p} planBadge={flags.plans} />)}
+          {newest.map((p) => <ProviderCard key={p.id} slug={slug} p={p} planBadge={flags.plans} viewerCondoId={condo.id} />)}
         </section>
       )}
       {providers.length === 0 && (

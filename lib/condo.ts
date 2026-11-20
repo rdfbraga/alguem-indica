@@ -60,3 +60,11 @@ export const getFeatures = cache(async (condoId: string): Promise<Flags> => {
   const { data } = await supabase.from("condo_features").select("feature,enabled").eq("condo_id", condoId);
   return parseFlags(data);
 });
+
+/** Condomínios da mesma região (inclui o próprio). Sem região, ou sem a migration 0021, é só o condomínio. */
+export const getScope = cache(async (condoId: string): Promise<string[]> => {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("condo_region_ids", { p_condo: condoId });
+  const ids = Array.isArray(data) ? (data as string[]) : [];
+  return !error && ids.length ? ids : [condoId];
+});

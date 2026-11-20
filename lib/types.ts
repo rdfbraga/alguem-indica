@@ -43,6 +43,7 @@ export type ProviderRow = {
   category_slug: string;
   category_name: string;
   category_icon: string;
+  condo_name?: string | null;
   avg_rating: number;
   review_count: number;
 };
@@ -51,6 +52,7 @@ export type ReviewRow = {
   provider_id: string;
   author_id: string;
   author_label: string;
+  author_origin?: string | null;
   rating: number;
   comment: string;
   status: "visible" | "hidden";

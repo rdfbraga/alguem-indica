@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireAdmin } from "@/lib/condo";
+import { getScope, requireAdmin } from "@/lib/condo";
 import type { Category, CategoryGroup, FeedbackRow, ProfileClaimRow, ProviderRow, ReviewRow } from "@/lib/types";
 import { FlaggedList } from "./FlaggedList";
 import { formatWhatsapp } from "@/lib/phone";
@@ -72,7 +72,7 @@ export default async function AdminModerar({ params }: { params: Promise<{ slug:
     ? ((await supabase.from("providers").select("id,name,whatsapp,kind,block,created_by").in("id", claims.map((c) => c.provider_id))).data ?? [])
     : [];
   const claimMembers = claims.length
-    ? ((await supabase.from("members").select("user_id,full_name,block,unit").eq("condo_id", condo.id).in("user_id", claims.map((c) => c.user_id))).data ?? [])
+    ? ((await supabase.from("members").select("user_id,full_name,block,unit").in("condo_id", await getScope(condo.id)).in("user_id", claims.map((c) => c.user_id))).data ?? [])
     : [];
   const fbNew = feedback.filter((f) => f.status === "new");
   const fbDone = feedback.filter((f) => f.status !== "new").slice(0, 15);
