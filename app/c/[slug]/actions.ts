@@ -10,6 +10,7 @@ import type { FormState } from "@/lib/types";
 import { parseFeedbackKind, validateMessage } from "@/lib/feedback";
 import { MAX_CATEGORIES, parseCategoryIds } from "@/lib/categories";
 import { FEATURES } from "@/lib/features";
+import { condoNext } from "@/lib/next-path";
 
 const str = (fd: FormData, k: string) => String(fd.get(k) ?? "").trim();
 
@@ -33,7 +34,7 @@ export async function completeOnboarding(slug: string, _: FormState, fd: FormDat
     return { error: `Não foi possível concluir o cadastro (${error.code ?? "erro"}: ${error.message}).` };
   }
   // Quem diz que também presta serviço vai direto ao cadastro do próprio perfil.
-  redirect(fd.get("offers_service") === "on" ? `/c/${slug}/novo?eu=1` : `/c/${slug}`);
+  redirect(fd.get("offers_service") === "on" ? `/c/${slug}/novo?eu=1` : condoNext(slug, str(fd, "next")));
 }
 
 /** Valida categorias (1 a 3) e o texto de "Outros". Devolve os ids na ordem (a primeira é a principal). */

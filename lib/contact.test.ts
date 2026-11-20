@@ -37,4 +37,6 @@ test("mensagem completa", () => {
   assert.equal(m2, "Boa tarde, Studio Priscila Nails! Moro no condomínio Vila Verde. Vi seu perfil no Alguém indica? e gostaria de saber sobre horários e valores. Pode me ajudar?");
   assert.match(buildContactMessage({ providerName: "Marmitas da Lúcia", condoName: "X", categorySlug: "marmita", hour: 20 }), /^Boa noite, .*fazer um pedido/);
   assert.ok(m.length < 220);
+  const withLink = buildContactMessage({ providerName: "Caio Eletricista", residentName: "Maria", condoName: "Parque Barueri", categorySlug: "eletricista", hour: 9, profileUrl: "https://www.alguemindica.app.br/c/parque-barueri/p/abc" });
+  assert.equal(withLink, m.replace("Maria da Silva", "Maria") + "\n\nSeu perfil: https://www.alguemindica.app.br/c/parque-barueri/p/abc");
 });

@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { whatsappLink } from "@/lib/phone";
 import { instagramUrl } from "@/lib/links";
 import { buildContactMessage, hourInSaoPaulo } from "@/lib/contact";
+import { SITE_URL } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 
@@ -47,7 +48,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const { data: me } = await supabase.from("members").select("full_name").eq("condo_id", condo.id).eq("user_id", user.id).maybeSingle();
     target = whatsappLink(
       p.whatsapp,
-      buildContactMessage({ providerName: p.name, residentName: me?.full_name, condoName: condo.name, categorySlug: p.category_slug, hour: hourInSaoPaulo() }),
+      buildContactMessage({ providerName: p.name, residentName: me?.full_name, condoName: condo.name, categorySlug: p.category_slug, hour: hourInSaoPaulo(), profileUrl: `${SITE_URL}/c/${slug}/p/${id}` }),
     );
   } else if (kind === "instagram" && p.instagram) {
     target = instagramUrl(p.instagram);

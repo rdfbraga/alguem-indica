@@ -19,7 +19,7 @@ function otpErrorMessage(error: { status?: number; code?: string; message?: stri
   return "Não foi possível enviar o link. Confira o e-mail e tente de novo." + ref;
 }
 
-export function LoginForm({ slug }: { slug: string }) {
+export function LoginForm({ slug, next }: { slug: string; next: string }) {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [message, setMessage] = useState("");
@@ -29,8 +29,8 @@ export function LoginForm({ slug }: { slug: string }) {
 
   // Google: volta pelo callback (OAuth). Link de e-mail: abre uma tela própria (/auth/confirm),
   // com o link no domínio do app (melhora a entrega) e conclusão só no clique do botão.
-  const redirectTo = () => `${window.location.origin}/auth/callback?next=${encodeURIComponent(`/c/${slug}`)}`;
-  const emailRedirectTo = () => `${window.location.origin}/auth/confirm?next=${encodeURIComponent(`/c/${slug}`)}`;
+  const redirectTo = () => `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
+  const emailRedirectTo = () => `${window.location.origin}/auth/confirm?next=${encodeURIComponent(next)}`;
 
   async function sendLink(e: React.FormEvent) {
     e.preventDefault();

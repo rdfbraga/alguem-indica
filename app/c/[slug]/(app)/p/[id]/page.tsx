@@ -11,6 +11,7 @@ import { PlanCard } from "@/components/PlanCard";
 import { ShowcaseView } from "@/components/ShowcaseView";
 import { ShowcaseEditor } from "./ShowcaseEditor";
 import { ReplyBox } from "./ReplyBox";
+import { SITE_URL } from "@/lib/site";
 import { profileOrigin, shareProfileLink, shareProfileText } from "@/lib/origin";
 import { Stars } from "@/components/Stars";
 import { providerCategoryLabels, parseCategoryIds } from "@/lib/categories";
@@ -31,7 +32,7 @@ export default async function Prestador({
 }) {
   const { slug, id } = await params;
   const { novo, jaexiste, addcat, catsOk, catsErro, plano, reivindicar } = await searchParams;
-  const { condo, user, member, supabase } = await requireMember(slug);
+  const { condo, user, member, supabase } = await requireMember(slug, `/c/${slug}/p/${id}`);
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
 
   const { data } = await supabase.from("provider_listing").select("*").eq("id", id).eq("condo_id", condo.id).maybeSingle();
@@ -94,7 +95,7 @@ export default async function Prestador({
   // Origem do perfil e compartilhamento (para quem cadastrou o próprio serviço ou já é o dono).
   const origin = profileOrigin(p);
   const isSelfRegistrant = origin === "self_pending" && p.created_by === user.id;
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.alguemindica.app.br";
+  const siteUrl = SITE_URL;
   const shareHref = shareProfileLink(shareProfileText({ name: p.name, categories: providerCategoryLabels(p), url: `${siteUrl}/c/${slug}/p/${p.id}` }));
   const askClaimHere = Boolean(reivindicar) && !isOwner && !p.owner_id && !hasPendingClaim;
   const alreadyOwned = Boolean(reivindicar) && !isOwner && Boolean(p.owner_id);

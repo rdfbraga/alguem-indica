@@ -53,8 +53,11 @@ export function buildContactMessage(args: {
   condoName: string;
   categorySlug: string;
   hour: number;
+  /** Link do perfil do prestador no app: mostra de onde veio o contato. */
+  profileUrl?: string;
 }): string {
   const who = args.residentName?.trim().split(/\s+/)[0];
   const intro = who ? `Meu nome é ${who} e moro no condomínio ${bareCondoName(args.condoName)}.` : `Moro no condomínio ${bareCondoName(args.condoName)}.`;
-  return `${greetingFor(args.hour)}, ${shortProviderName(args.providerName)}! ${intro} Vi seu perfil no Alguém indica? e ${INTENT_TEXT[contactIntent(args.categorySlug)]}. Pode me ajudar?`;
+  const text = `${greetingFor(args.hour)}, ${shortProviderName(args.providerName)}! ${intro} Vi seu perfil no Alguém indica? e ${INTENT_TEXT[contactIntent(args.categorySlug)]}. Pode me ajudar?`;
+  return args.profileUrl ? `${text}\n\nSeu perfil: ${args.profileUrl}` : text;
 }

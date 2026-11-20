@@ -3,10 +3,11 @@ import { useActionState } from "react";
 import { completeOnboarding } from "../actions";
 import type { FormState } from "@/lib/types";
 
-export function OnboardingForm({ slug, defaultName }: { slug: string; defaultName: string }) {
+export function OnboardingForm({ slug, defaultName, next }: { slug: string; defaultName: string; next: string }) {
   const [state, action, pending] = useActionState<FormState, FormData>(completeOnboarding.bind(null, slug), undefined);
   return (
     <form action={action} className="space-y-4">
+      <input type="hidden" name="next" value={next} />
       <div>
         <label className="label" htmlFor="full_name">Nome completo</label>
         <input id="full_name" name="full_name" required defaultValue={defaultName} className="input" />

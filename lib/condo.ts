@@ -1,8 +1,10 @@
 import { cache } from "react";
 import { notFound, redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import type { Condo, Member } from "@/lib/types";
 import { parseFlags, type Flags } from "@/lib/features";
+import { withNext } from "@/lib/next-path";
 
 export const getCondo = cache(async (slug: string): Promise<Condo> => {
   const supabase = await createClient();
@@ -22,11 +24,13 @@ export const getUser = cache(async () => {
   return data.user;
 });
 
-/** Exige login e cadastro de morador neste condomínio. */
-export async function requireMember(slug: string) {
+/** Exige login e cadastro de morador neste condomínio. `nextPath` (opcional) é para onde voltar depois de entrar. */
+export async function requireMember(slug: string, nextPath?: string) {
   const condo = await getCondo(slug);
+  // Sem destino explícito, volta para a página que a pessoa tentou abrir (valor posto pelo proxy; validado em withNext).
+  nextPath ??= (await headers()).get("x-next-path") ?? undefined;
   const user = await getUser();
-  if (!user) redirect(`/c/${slug}/entrar`);
+  if (!user) redirect(withNext(`/c/${slug}/entrar`, slug, nextPath));
   const supabase = await createClient();
   const { data: member } = await supabase
     .from("members")
@@ -34,7 +38,7 @@ export async function requireMember(slug: string) {
     .eq("condo_id", condo.id)
     .eq("user_id", user.id)
     .maybeSingle();
-  if (!member) redirect(`/c/${slug}/cadastro`);
+  if (!member) redirect(withNext(`/c/${slug}/cadastro`, slug, nextPath));
   return { condo, user, member: member as Member, supabase };
 }
 
