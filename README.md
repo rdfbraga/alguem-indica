@@ -45,23 +45,4 @@ Indicações de prestadores de serviço **dentro do seu condomínio**: moradores
 8. **Deploy**: importe o repositório na Vercel e defina as 3 variáveis de ambiente do `.env.example`.
 
 ### Adicionar outro condomínio
-```sql
-insert into public.condominiums (slug, name) values ('residencial-xyz', 'Residencial XYZ');
-```
-O link do novo condomínio é `/c/residencial-xyz`. Os dados são totalmente isolados por RLS.
-
-## Testes
-
-```bash
-npm run typecheck
-npm test        # telefone e ordenação/filtro das listas
-```
-A migration e as policies de RLS foram verificadas contra Postgres 16 (isolamento entre condomínios, anti-escalação de admin, duplicidade, avaliação única).
-
-## Próximos passos sugeridos
-
-- **Verificação leve**: código de acesso por condomínio (ou convite por vizinho) — o schema já permite adicionar uma coluna em `condominiums`.
-- Subdomínio por condomínio (`xyz.alguemindica.com.br`) em vez de `/c/<slug>`.
-- Assumir perfil pelo prestador (código no WhatsApp) → assinatura/selo “Recomendado”.
-- Editar/excluir a própria indicação e a própria conta (LGPD).
-- Avisos por e-mail ao admin; banners de comércios locais; agendamento.
+Use `supabase/tools/novo_condominio.sql`: edite o slug, o nome e o e-mail do administrador e rode no SQL Editor. O link do novo condomínio é `/c/<slug>`; os dados são totalmente isolados por RLS.
