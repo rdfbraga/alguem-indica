@@ -8,6 +8,7 @@ import { ListControls } from "@/components/ListControls";
 import { SearchBox } from "@/components/SearchBox";
 import { AdCard } from "@/components/AdCard";
 import { InstallPrompt } from "@/components/InstallPrompt";
+import { ProviderCta } from "@/components/ProviderCta";
 import { adIsLive, todayInSaoPaulo } from "@/lib/features";
 import type { AdRow } from "@/lib/types";
 
@@ -106,12 +107,24 @@ export default async function Home({
     .from("providers").select("id", { count: "exact", head: true })
     .eq("condo_id", condo.id).eq("owner_id", user.id);
 
+  // Quem já cadastrou o próprio serviço e aguarda confirmação vê o andamento, e não o convite de novo.
+  let pendingSelf: { id: string; name: string } | null = null;
+  if ((ownedCount ?? 0) === 0) {
+    const { data: mine } = await supabase
+      .from("provider_listing").select("id,name").eq("condo_id", condo.id).eq("created_by", user.id).eq("self_pending", true).limit(1);
+    pendingSelf = (mine?.[0] as { id: string; name: string } | undefined) ?? null;
+  }
+
   return (
     <div className="space-y-6">
       <section className="rounded-3xl bg-gradient-to-br from-brand-500 to-[#e85400] p-5 text-white shadow-md">
         <h1 className="text-2xl font-extrabold">Olá, {firstName}! 👋</h1>
         <p className="mt-1 font-semibold text-white">Precisando de alguém de confiança? Veja quem os seus vizinhos indicam.</p>
       </section>
+      <SearchBox slug={slug} q="" suggestions={suggestions} />
+
+      {(ownedCount ?? 0) === 0 && <ProviderCta slug={slug} pending={pendingSelf} />}
+
       <InstallPrompt />
 
       {(ownedCount ?? 0) > 0 && (
@@ -121,16 +134,6 @@ export default async function Home({
           <span className="text-navy/40" aria-hidden>›</span>
         </Link>
       )}
-      <SearchBox slug={slug} q="" suggestions={suggestions} />
-
-      {(ownedCount ?? 0) === 0 && (
-        <Link href={`/c/${slug}/novo?eu=1`} className="card flex items-center gap-3 !p-3 transition hover:border-brand-500">
-          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-50 text-xl">🧰</span>
-          <span className="flex-1 text-sm"><b>Presta algum serviço?</b><br /><span className="text-navy/65">Divulgue seu perfil para os vizinhos.</span></span>
-          <span className="text-navy/40" aria-hidden>›</span>
-        </Link>
-      )}
-
       <section>
         <h2 className="mb-3 text-lg font-extrabold">O que você procura?</h2>
         <div className="space-y-2">
