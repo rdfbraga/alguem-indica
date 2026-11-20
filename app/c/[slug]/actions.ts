@@ -611,3 +611,37 @@ export async function adminClearSpecialtyText(slug: string, fd: FormData) {
   await supabase.from("providers").update({ custom_specialty: null, custom_specialty_reviewed: false }).in("id", ids).eq("condo_id", condo.id);
   revalidatePath(`/c/${slug}`, "layout");
 }
+
+
+// ─── Categorias (Admin): gerenciar a lista ───
+export async function adminSaveCategory(slug: string, categoryId: number | null, _: FormState, fd: FormData): Promise<FormState> {
+  const { condo, supabase } = await requireAdmin(slug);
+  const group_id = Number(fd.get("group_id"));
+  const name = str(fd, "name");
+  if (!Number.isInteger(group_id) || group_id <= 0) return { error: "Escolha o grupo." };
+  if (name.length < 2 || name.length > 40) return { error: "O nome deve ter de 2 a 40 letras." };
+  const { error } = await supabase.rpc("admin_save_category", {
+    p_condo: condo.id, p_id: categoryId, p_group_id: group_id, p_name: name,
+    p_icon: str(fd, "icon").slice(0, 8), p_keywords: str(fd, "keywords").slice(0, 400),
+  });
+  if (error) {
+    if (error.message?.includes("already_exists")) return { error: "Já existe uma categoria com esse nome." };
+    if (error.message?.includes("protegida")) return { error: "Esta categoria é protegida e não pode ser alterada." };
+    console.error("adminSaveCategory", error);
+    return { error: "Não foi possível salvar a categoria." };
+  }
+  revalidatePath(`/c/${slug}`, "layout");
+  return { ok: categoryId ? "Categoria atualizada!" : "Categoria criada!" };
+}
+
+export async function adminDeleteCategory(slug: string, categoryId: number, fd: FormData) {
+  const { condo, supabase } = await requireAdmin(slug);
+  const move = Number(fd.get("move_to"));
+  const { error } = await supabase.rpc("admin_delete_category", {
+    p_condo: condo.id, p_id: categoryId, p_move_to: Number.isInteger(move) && move > 0 ? move : null,
+  });
+  revalidatePath(`/c/${slug}`, "layout");
+  if (error?.message?.includes("in_use_elsewhere")) redirect(`/c/${slug}/admin/categorias?erro=em-uso`);
+  if (error?.message?.includes("need_target")) redirect(`/c/${slug}/admin/categorias?erro=destino`);
+  if (error) console.error("adminDeleteCategory", error);
+}

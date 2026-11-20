@@ -376,6 +376,14 @@ export default async function Admin({
         {suggestions.length === 0 && <p className="text-sm text-navy/60">Nenhuma sugestão pendente.</p>}
       </section>
 
+      <Link href={`/c/${slug}/admin/categorias`} className="card flex items-center gap-3 transition hover:border-brand-500">
+        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-50 text-xl">🗂️</span>
+        <span className="min-w-0 flex-1">
+          <b>Categorias</b>
+          <span className="block text-sm text-navy/65">Criar, editar, mover de grupo e excluir</span>
+        </span>
+      </Link>
+
       <Link href={`/c/${slug}/admin/especialidades`} className="card flex items-center gap-3 transition hover:border-brand-500">
         <span className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-50 text-xl">🩺</span>
         <span className="min-w-0 flex-1">
