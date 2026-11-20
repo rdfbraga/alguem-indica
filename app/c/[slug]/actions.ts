@@ -683,3 +683,19 @@ export async function dismissReviewPrompt(slug: string, providerId: string) {
   await supabase.rpc("dismiss_review_prompt", { p_provider: providerId });
   revalidatePath(`/c/${slug}`);
 }
+
+// Perfis em lote (Admin → Perfis). O banco só deixa mudar perfis dos condomínios que a pessoa administra.
+export async function adminSetProvidersStatus(slug: string, status: "active" | "hidden", fd: FormData) {
+  const { supabase } = await requireAdmin(slug);
+  const ids = idsFromChecked(fd);
+  if (!ids.length) return;
+  await supabase.from("providers").update({ status }).in("id", ids);
+  revalidatePath(`/c/${slug}`, "layout");
+}
+export async function adminClearProvidersFlags(slug: string, fd: FormData) {
+  const { supabase } = await requireAdmin(slug);
+  const ids = idsFromChecked(fd);
+  if (!ids.length) return;
+  await supabase.from("providers").update({ flagged: false, flag_reason: null }).in("id", ids);
+  revalidatePath(`/c/${slug}`, "layout");
+}
