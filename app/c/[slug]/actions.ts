@@ -645,3 +645,22 @@ export async function adminDeleteCategory(slug: string, categoryId: number, fd: 
   if (error?.message?.includes("need_target")) redirect(`/c/${slug}/admin/categorias?erro=destino`);
   if (error) console.error("adminDeleteCategory", error);
 }
+
+// Duplicidades em lote: "Está ok" ou ocultar vários perfis de uma vez.
+function idsFromChecked(fd: FormData) {
+  return fd.getAll("id").map(String).filter((s) => UUID.test(s));
+}
+export async function adminClearFlags(slug: string, fd: FormData) {
+  const { condo, supabase } = await requireAdmin(slug);
+  const ids = idsFromChecked(fd);
+  if (!ids.length) return;
+  await supabase.from("providers").update({ flagged: false, flag_reason: null }).in("id", ids).eq("condo_id", condo.id);
+  revalidatePath(`/c/${slug}`, "layout");
+}
+export async function adminHideFlagged(slug: string, fd: FormData) {
+  const { condo, supabase } = await requireAdmin(slug);
+  const ids = idsFromChecked(fd);
+  if (!ids.length) return;
+  await supabase.from("providers").update({ status: "hidden", flagged: false, flag_reason: null }).in("id", ids).eq("condo_id", condo.id);
+  revalidatePath(`/c/${slug}`, "layout");
+}

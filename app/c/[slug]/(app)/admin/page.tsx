@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/condo";
 import type { Category, CategoryGroup, FeedbackRow, ProfileClaimRow, ProviderRow, ReviewRow } from "@/lib/types";
+import { FlaggedList } from "./FlaggedList";
 import { formatWhatsapp } from "@/lib/phone";
 import { KIND_BY_VALUE } from "@/lib/feedback";
 import { groupCategories } from "@/lib/groups";
 import { capitalizeFirst, findSimilarCategories, groupSuggestions } from "@/lib/suggestions";
 import {
-  adminClearFlag,
+  adminClearFlags,
+  adminHideFlagged,
   adminDecideClaim,
   adminReplyFeedback,
   adminSetFeedbackStatus,
@@ -261,19 +263,14 @@ export default async function AdminModerar({ params }: { params: Promise<{ slug:
 
       <section className="space-y-3">
         <h2 className="font-semibold">⚠️ Possíveis duplicidades / inconsistências ({(flagged ?? []).length})</h2>
-        {((flagged ?? []) as ProviderRow[]).map((p) => (
-          <div key={p.id} className="card space-y-2">
-            <Link href={`/c/${slug}/p/${p.id}`} className="font-semibold underline">{p.name}</Link>
-            <span className="text-sm text-navy/60"> · {p.category_name}{p.status === "hidden" ? " · OCULTO" : ""}</span>
-            <p className="text-sm text-amber-800">{p.flag_reason}</p>
-            <div className="flex gap-2">
-              <form action={adminClearFlag.bind(null, slug, p.id)}><button className="btn-secondary !px-3 !py-2 !text-sm">Está ok</button></form>
-              <form action={adminSetProviderStatus.bind(null, slug, p.id, p.status === "hidden" ? "active" : "hidden")}>
-                <button className="btn-secondary !px-3 !py-2 !text-sm">{p.status === "hidden" ? "Reexibir" : "Ocultar"}</button>
-              </form>
-            </div>
-          </div>
-        ))}
+        {(flagged ?? []).length > 0 && (
+          <FlaggedList
+            slug={slug}
+            rows={((flagged ?? []) as ProviderRow[]).map((p) => ({ id: p.id, name: p.name, category_name: p.category_name, hidden: p.status === "hidden", reason: p.flag_reason }))}
+            onOk={adminClearFlags.bind(null, slug)}
+            onHide={adminHideFlagged.bind(null, slug)}
+          />
+        )}
         {(flagged ?? []).length === 0 && <p className="text-sm text-navy/60">Nada pendente. 🎉</p>}
       </section>
 
