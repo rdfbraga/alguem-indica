@@ -31,6 +31,15 @@ export default async function Ajuda({
         <p className="muted">Dúvidas, problemas ou ideias para melhorar o app. A gente responde por aqui.</p>
       </header>
 
+      <details className="card !p-3 text-sm">
+        <summary className="cursor-pointer font-bold text-sky-brand">📲 Como instalar o app no celular</summary>
+        <div className="mt-3 space-y-3 text-navy/80">
+          <p><b>Android (Chrome):</b> toque no menu <b>⋮</b> e em <b>Instalar app</b> (ou <b>Adicionar à tela inicial</b>).</p>
+          <p><b>iPhone (Safari):</b> toque em <b>Compartilhar</b> (⬆️) e em <b>Adicionar à Tela de Início</b>.</p>
+          <p className="text-xs text-navy/60">Abra o link no navegador do celular. Se ele abriu dentro do WhatsApp ou do Instagram, use “Abrir no navegador” antes.</p>
+        </div>
+      </details>
+
       <FeedbackForm slug={slug} defaultContact={user.email ?? ""} defaultKind={parseFeedbackKind(sp.tipo) ?? "suporte"} defaultMessage={(sp.msg ?? "").slice(0, 300)} />
 
       {mine.length > 0 && (

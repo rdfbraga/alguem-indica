@@ -7,6 +7,7 @@ import { ProviderCard } from "@/components/ProviderCard";
 import { ListControls } from "@/components/ListControls";
 import { SearchBox } from "@/components/SearchBox";
 import { AdCard } from "@/components/AdCard";
+import { InstallPrompt } from "@/components/InstallPrompt";
 import { adIsLive, todayInSaoPaulo } from "@/lib/features";
 import type { AdRow } from "@/lib/types";
 
@@ -111,6 +112,8 @@ export default async function Home({
         <h1 className="text-2xl font-extrabold">Olá, {firstName}! 👋</h1>
         <p className="mt-1 font-semibold text-white">Precisando de alguém de confiança? Veja quem os seus vizinhos indicam.</p>
       </section>
+      <InstallPrompt />
+
       {(ownedCount ?? 0) > 0 && (
         <Link href={`/c/${slug}/resultados`} className="card flex items-center gap-3 transition hover:border-brand-500">
           <span className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-50 text-xl">📊</span>
