@@ -1,7 +1,7 @@
 -- ============================================================================
 -- DADOS DE TESTE do Alguém indica? — rode no SQL Editor do Supabase.
 --  * Cria ~170 prestadores (3 a 4 por categoria, nas ~50 categorias) e 15 vizinhos FICTÍCIOS que avaliam.
---  * Requer as migrations 0004, 0005 e 0007 (categorias novas e várias categorias por perfil); com a 0009 também cria visitas, cliques, Instagram e site; com a 0010, perfis com plano/vitrine/respostas e 3 anúncios (as chaves continuam desligadas); com a 0012, especialidades nos médicos, dentistas, advogados etc. Alguns ficam em "Outros" com categoria sugerida.
+--  * Requer as migrations 0004, 0005, 0007 e 0013 (categorias novas e várias categorias por perfil); com a 0009 também cria visitas, cliques, Instagram e site; com a 0010, perfis com plano/vitrine/respostas e 3 anúncios (as chaves continuam desligadas); com a 0012, especialidades nos médicos, dentistas, advogados etc. Alguns ficam em "Outros" com categoria sugerida.
 --  * Usa o condomínio mais antigo cadastrado (troque v_slug para escolher outro).
 --  * Pode rodar de novo: apaga os dados de teste anteriores antes de recriar.
 --  * Para remover tudo depois: rode supabase/dev/test_data_cleanup.sql.
@@ -29,6 +29,9 @@ begin
     select id into v_condo from public.condominiums where slug = v_slug;
   end if;
   if v_condo is null then raise exception 'Condomínio não encontrado. Rode antes o seed.sql.'; end if;
+  if not exists (select 1 from public.categories where slug = 'celular') then
+    raise exception 'Categorias novas não encontradas. Rode antes a migration 0013_split_carro_tech_outros.sql.';
+  end if;
   if not exists (select 1 from public.categories where slug = 'medico') then
     raise exception 'Categorias novas não encontradas. Rode antes a migration 0005_category_groups.sql.';
   end if;
@@ -214,18 +217,42 @@ begin
       ('lava-jato','Lava Jato Brilho','external',null,'Lavagem completa e polimento.',null),
       ('lava-jato','Estética Automotiva Max','resident','F','Higienização interna e vitrificação. Bloco F.',null),
       ('lava-jato','Lavagem a Seco Ecológica','external',null,'Lavagem no estacionamento, sem usar água.',null),
-      ('tecnico','TI em Casa','external',null,'Formatação, notebook lento e rede Wi-Fi.',null),
-      ('tecnico','Celular Express','external',null,'Troca de tela e bateria na hora.',null),
-      ('tecnico','Técnico de TV Valdir','external',null,'Conserto e instalação de TVs.',null),
+      ('computador','TI em Casa','external',null,'Formatação, notebook lento e rede Wi-Fi.',null),
+      ('celular','Celular Express','external',null,'Troca de tela e bateria na hora.',null),
+      ('tv-som','Técnico de TV Valdir','external',null,'Conserto e instalação de TVs.',null),
       ('redes','Wi-Fi Fácil','resident','C','Instalação de roteadores e câmeras. Bloco C.',null),
-      ('redes','Câmeras Seguras','external',null,'Câmeras, alarmes e interfones.',null),
+      ('cameras','Câmeras Seguras','external',null,'Câmeras, alarmes e interfones.',null),
       ('redes','Rede em Dia','external',null,'Cabeamento estruturado e repetidores.',null),
       ('mudanca','Fretes Rápidos Souza','external',null,'Carreto e mudanças pequenas, com ajudantes.',null),
       ('mudanca','Carreto do Márcio','external',null,'Fretes na região, com ou sem montador.',null),
       ('mudanca','Mudanças Brasil','external',null,'Mudança completa, embalagem e seguro.',null),
       ('outros','Costureira Dona Nair','resident','A','Ajustes de roupa e cortinas. Bloco A.','Costureira'),
       ('outros','Costureira Lúcia','external',null,'Barras, ajustes e vestidos sob medida.','costureira'),
-      ('outros','Tradutora Sofia','external',null,'Tradução juramentada de documentos.','Tradução')
+      ('outros','Tradutora Sofia','external',null,'Tradução juramentada de documentos.','Tradução'),
+      ('tecnico','Assistência Técnica Souza','external',null,'TV, computador, celular e pequenos eletrodomésticos. Orçamento grátis.',null),
+      ('funilaria','Funilaria Martelinho Express','external',null,'Martelinho de ouro e pintura de para-choques.',null),
+      ('funilaria','Auto Pintura Silva','external',null,'Pintura completa e reparo de batidas, com orçamento grátis.',null),
+      ('auto-eletrica','Auto Elétrica do Beto','external',null,'Bateria, alternador e faróis. Atende no estacionamento.',null),
+      ('auto-eletrica','Eletro Carro 24h','external',null,'Diagnóstico com scanner e injeção eletrônica.',null),
+      ('borracharia','Borracharia Roda Viva','external',null,'Pneus novos e usados, alinhamento e balanceamento.',null),
+      ('borracharia','Pneu Fácil Móvel','external',null,'Troca e calibragem de pneus na sua vaga.',null),
+      ('guincho','Guincho Rápido 24h','external',null,'Reboque e socorro mecânico em toda a região.',null),
+      ('guincho','SOS Reboque','external',null,'Plataforma para carros e motos, 24 horas.',null),
+      ('som-insulfilm','Insulfilm & Som Premium','external',null,'Película, som e multimídia com garantia.',null),
+      ('som-insulfilm','Auto Acessórios Max','resident','F','Alarmes, tapetes e acessórios. Bloco F.',null),
+      ('automacao','Casa Inteligente Brasil','external',null,'Alexa, iluminação e fechaduras inteligentes.',null),
+      ('automacao','Smart Home Instalações','resident','H','Automação residencial para apartamentos. Bloco H.',null),
+      ('sites','Estúdio Pixel Sites','external',null,'Sites, lojas virtuais e identidade visual.',null),
+      ('sites','Social Media da Carol','resident','B','Gestão de Instagram para pequenos negócios. Bloco B.',null),
+      ('entregas','Moto Entregas Veloz','external',null,'Entregas rápidas e documentos no mesmo dia.',null),
+      ('entregas','Motoboy do Léo','resident','G','Entregas na região. Bloco G.',null),
+      ('motorista','Motorista Executivo Paulo','external',null,'Transfer para aeroportos e viagens.',null),
+      ('motorista','Leva e Traz Escolar','external',null,'Transporte escolar com monitora.',null),
+      ('costura','Ateliê da Dona Rosa','external',null,'Barras, ajustes e cortinas sob medida.',null),
+      ('costura','Costura Express','resident','C','Ajustes de roupa em 24 horas. Bloco C.',null),
+      ('sapateiro','Sapataria Dois Irmãos','external',null,'Sapatos, bolsas e malas: conserto e restauro.',null),
+      ('traducao','Tradução Juramentada Ana','external',null,'Tradução de documentos e vistos.',null),
+      ('lavanderia','Lavanderia Cheirinho','external',null,'Edredons, tapetes e lavagem a seco. Busca e entrega.',null)
     ) as t(cat, nm, kd, blk, ds, cc)
   loop
     i := i + 1;
@@ -262,7 +289,7 @@ begin
       ('Seu Joaquim Hidráulica','pedreiro'),('Nete Passadeira','diarista'),
       ('Camila Pilates','fisioterapeuta'),('Dra. Beatriz Fisioterapia','cuidador'),
       ('Barbeiro Léo','cabeleireiro'),('Chef Marcelo em Casa','marmita'),
-      ('Wi-Fi Fácil','tecnico'),('Câmeras Seguras','eletricista')
+      ('Wi-Fi Fácil','cameras'),('Câmeras Seguras','eletricista')
     ) as e(nm, slug)
     join public.providers pr on pr.name = e.nm and pr.created_by = any (v_user_ids)
     join public.categories c on c.slug = e.slug
