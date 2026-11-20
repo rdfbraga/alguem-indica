@@ -11,6 +11,7 @@ import { parseFeedbackKind, validateMessage } from "@/lib/feedback";
 import { MAX_CATEGORIES, parseCategoryIds } from "@/lib/categories";
 import { FEATURES } from "@/lib/features";
 import { condoNext } from "@/lib/next-path";
+import { MAX_SPECIALTIES } from "@/lib/specialties";
 
 const str = (fd: FormData, k: string) => String(fd.get(k) ?? "").trim();
 
@@ -55,6 +56,16 @@ async function readCategories(
   return { ok: true, ids, custom: hasOther ? custom : "", hasOther };
 }
 
+/** Especialidades do formulário (opcional). `present` = o formulário trouxe o seletor (para não apagar as existentes sem querer). */
+function readSpecialties(fd: FormData): { present: boolean; ids: number[]; custom: string; error?: string } {
+  const present = fd.get("has_specialties") === "1";
+  const ids = parseCategoryIds(fd.getAll("specialty_id"));
+  const custom = str(fd, "custom_specialty").replace(/\s+/g, " ");
+  if (ids.length > MAX_SPECIALTIES) return { present, ids, custom, error: `Escolha no máximo ${MAX_SPECIALTIES} especialidades.` };
+  if (custom && (custom.length < 2 || custom.length > 40)) return { present, ids, custom, error: "A especialidade escrita deve ter de 2 a 40 letras." };
+  return { present, ids, custom };
+}
+
 export async function createProvider(slug: string, _: FormState, fd: FormData): Promise<FormState> {
   const { condo, user, member, supabase } = await requireMember(slug);
   const name = str(fd, "name");
@@ -75,6 +86,8 @@ export async function createProvider(slug: string, _: FormState, fd: FormData): 
   if (!site.ok) return { error: "Site inválido. Use um endereço como www.seusite.com.br." };
   const cats = await readCategories(supabase, fd);
   if (!cats.ok) return { error: cats.error };
+  const specs = readSpecialties(fd);
+  if (specs.error) return { error: specs.error };
 
   const block = isMe ? member.block : kind === "resident" ? str(fd, "block") || member.block : null;
   const { data, error } = await supabase
@@ -113,6 +126,10 @@ export async function createProvider(slug: string, _: FormState, fd: FormData): 
     });
     if (rpcError) console.error("set_provider_categories", rpcError); // o perfil já existe com a categoria principal
   }
+  if (specs.ids.length || specs.custom) {
+    const { error: specError } = await supabase.rpc("set_provider_specialties", { p_provider: data.id, p_specialty_ids: specs.ids, p_custom: specs.custom || null });
+    if (specError) console.error("set_provider_specialties", specError); // o perfil já existe; só ficam sem as especialidades
+  }
   revalidatePath(`/c/${slug}`, "layout");
   redirect(`/c/${slug}/p/${data.id}?novo=${isMe ? "eu" : "1"}`);
 }
@@ -123,6 +140,8 @@ async function saveCategories(slug: string, providerId: string, fd: FormData): P
   if (!UUID.test(providerId)) return "Perfil inválido.";
   const cats = await readCategories(supabase, fd);
   if (!cats.ok) return cats.error;
+  const specs = readSpecialties(fd);
+  if (specs.error) return specs.error;
   const { error } = await supabase.rpc("set_provider_categories", {
     p_provider: providerId, p_category_ids: cats.ids, p_custom: cats.custom || null,
   });
@@ -131,6 +150,13 @@ async function saveCategories(slug: string, providerId: string, fd: FormData): P
     if (error.message?.includes("custom_required")) return "Diga qual é o serviço em “Outros”.";
     console.error("saveCategories", error);
     return "Não foi possível salvar as categorias.";
+  }
+  if (specs.present) {
+    const { error: specError } = await supabase.rpc("set_provider_specialties", { p_provider: providerId, p_specialty_ids: specs.ids, p_custom: specs.custom || null });
+    if (specError) {
+      console.error("set_provider_specialties", specError);
+      return "As categorias foram salvas, mas não foi possível salvar as especialidades.";
+    }
   }
   revalidatePath(`/c/${slug}`, "layout");
   return null;

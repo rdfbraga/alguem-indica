@@ -1,7 +1,7 @@
 -- ============================================================================
 -- DADOS DE TESTE do Alguém indica? — rode no SQL Editor do Supabase.
 --  * Cria ~170 prestadores (3 a 4 por categoria, nas ~50 categorias) e 15 vizinhos FICTÍCIOS que avaliam.
---  * Requer as migrations 0004, 0005 e 0007 (categorias novas e várias categorias por perfil); com a 0009 também cria visitas, cliques, Instagram e site; com a 0010, perfis com plano/vitrine/respostas e 3 anúncios (as chaves continuam desligadas). Alguns ficam em "Outros" com categoria sugerida.
+--  * Requer as migrations 0004, 0005 e 0007 (categorias novas e várias categorias por perfil); com a 0009 também cria visitas, cliques, Instagram e site; com a 0010, perfis com plano/vitrine/respostas e 3 anúncios (as chaves continuam desligadas); com a 0012, especialidades nos médicos, dentistas, advogados etc. Alguns ficam em "Outros" com categoria sugerida.
 --  * Usa o condomínio mais antigo cadastrado (troque v_slug para escolher outro).
 --  * Pode rodar de novo: apaga os dados de teste anteriores antes de recriar.
 --  * Para remover tudo depois: rode supabase/dev/test_data_cleanup.sql.
@@ -316,6 +316,26 @@ begin
         from public.providers pr
        where pr.created_by = any (v_user_ids) and pr.owner_id is null and pr.kind = 'resident'
        order by random() limit 5;
+  end if;
+
+  -- (migration 0012) especialidades: primeiro as que aparecem no nome/descrição ("Pediatra", "Trabalhista"...),
+  -- depois, para ~70% dos que ficaram sem, uma especialidade qualquer da categoria principal
+  if to_regclass('public.provider_specialties') is not null then
+    insert into public.provider_specialties (provider_id, specialty_id, condo_id)
+      select pr.id, sp.id, v_condo
+        from public.providers pr
+        join public.specialties sp on sp.category_id = pr.category_id
+       where pr.created_by = any (v_user_ids)
+         and lower(unaccent(pr.name || ' ' || pr.description)) like '%' || lower(unaccent(split_part(sp.name, ' ', 1))) || '%'
+      on conflict do nothing;
+    insert into public.provider_specialties (provider_id, specialty_id, condo_id)
+      select x.pid, x.sid, v_condo
+        from (select pr.id as pid, sp.id as sid, row_number() over (partition by pr.id order by random()) as rn
+                from public.providers pr join public.specialties sp on sp.category_id = pr.category_id
+               where pr.created_by = any (v_user_ids)
+                 and not exists (select 1 from public.provider_specialties ps where ps.provider_id = pr.id)) x
+       where x.rn = 1 and random() < 0.7
+      on conflict do nothing;
   end if;
 
   raise notice 'Pronto: % prestadores e % avaliações de teste.',

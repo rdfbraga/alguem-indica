@@ -5,13 +5,15 @@ import type { Category, ProviderRow } from "@/lib/types";
 import { filterKind, parseKind, parseOrder, sortProviders } from "@/lib/listing";
 import { ProviderCard } from "@/components/ProviderCard";
 import { ListControls } from "@/components/ListControls";
+import { SpecialtyChips } from "@/components/SpecialtyChips";
+import { filterBySpecialty, parseSpecialtyFilter, specialtyCounts, type Specialty } from "@/lib/specialties";
 
 export default async function Categoria({
   params,
   searchParams,
 }: {
   params: Promise<{ slug: string; cat: string }>;
-  searchParams: Promise<{ ordem?: string; tipo?: string }>;
+  searchParams: Promise<{ ordem?: string; tipo?: string; esp?: string }>;
 }) {
   const { slug, cat } = await params;
   const sp = await searchParams;
@@ -34,14 +36,22 @@ export default async function Categoria({
   }
   const data = res.data;
   const all = (data ?? []) as ProviderRow[];
-  const providers = sortProviders(filterKind(all, kind), order);
   const c = category as Category;
+  // Filtro por especialidade (só as que têm prestadores neste condomínio).
+  const { data: specData } = await supabase.from("specialties").select("id,category_id,slug,name").eq("category_id", c.id);
+  const specOptions = specialtyCounts(all, (specData ?? []) as Specialty[]);
+  const esp = parseSpecialtyFilter(sp.esp, specOptions);
+  const providers = sortProviders(filterBySpecialty(filterKind(all, kind), esp), order);
+  const keep = { ordem: sp.ordem && order !== "melhores" ? order : undefined, tipo: kind !== "todos" ? kind : undefined };
   return (
     <div className="space-y-3">
       <Link href={`/c/${slug}`} className="text-sm text-navy/60">← Categorias</Link>
       <h1 className="text-xl font-bold">{c.icon} {c.name}</h1>
+      {specOptions.length > 0 && (
+        <SpecialtyChips base={`/c/${slug}/categoria/${cat}`} options={specOptions} current={esp} total={all.length} keep={keep} />
+      )}
       {all.length > 1 && (
-        <ListControls base={`/c/${slug}/categoria/${cat}`} order={order} kind={kind} orders={["melhores", "avaliados", "recentes"]} />
+        <ListControls base={`/c/${slug}/categoria/${cat}`} order={order} kind={kind} orders={["melhores", "avaliados", "recentes"]} extra={{ esp }} />
       )}
       {providers.map((p) => <ProviderCard key={p.id} slug={slug} p={p} planBadge={flags.plans} />)}
       {providers.length === 0 && all.length > 0 && (

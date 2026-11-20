@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireMember } from "@/lib/condo";
 import type { Category, CategoryGroup } from "@/lib/types";
 import { groupCategories } from "@/lib/groups";
+import type { Specialty } from "@/lib/specialties";
 import { ProviderForm } from "./ProviderForm";
 
 export default async function Novo({
@@ -18,12 +19,14 @@ export default async function Novo({
     supabase.from("categories").select("*").order("sort"),
     supabase.from("category_groups").select("id,slug,name,icon").order("sort"),
   ]);
+  const { data: specData } = await supabase.from("specialties").select("id,category_id,slug,name").order("sort");
+  const specialties = (specData ?? []) as Specialty[];
   const sections = groupCategories((groupData ?? []) as CategoryGroup[], (data ?? []) as Category[]);
   return (
     <div className="space-y-4">
       <Link href={`/c/${slug}`} className="text-sm text-navy/60">← Voltar</Link>
       <h1 className="text-xl font-bold">Cadastrar um prestador</h1>
-      <ProviderForm slug={slug} sections={sections} userId={user.id} defaultBlock={member.block} defaultName={member.full_name} initialMode={sp.eu ? "self" : "other"} />
+      <ProviderForm slug={slug} sections={sections} userId={user.id} defaultBlock={member.block} defaultName={member.full_name} initialMode={sp.eu ? "self" : "other"} specialties={specialties} />
     </div>
   );
 }

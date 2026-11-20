@@ -2,6 +2,8 @@
 import { useActionState, useState } from "react";
 import { updateProviderCategories } from "../../../actions";
 import { CategoryPicker } from "@/components/CategoryPicker";
+import { SpecialtyPicker } from "@/components/SpecialtyPicker";
+import type { Specialty } from "@/lib/specialties";
 import type { Category, FormState } from "@/lib/types";
 import type { GroupLike, Section } from "@/lib/groups";
 
@@ -11,23 +13,31 @@ export function EditCategories({
   sections,
   initialIds,
   initialCustom,
+  specialties,
+  initialSpecialtyIds,
+  initialCustomSpecialty,
 }: {
   slug: string;
   providerId: string;
   sections: Section<GroupLike, Category>[];
   initialIds: number[];
   initialCustom: string;
+  specialties: Specialty[];
+  initialSpecialtyIds: number[];
+  initialCustomSpecialty: string;
 }) {
   const [state, action, pending] = useActionState<FormState, FormData>(
     updateProviderCategories.bind(null, slug, providerId),
     undefined,
   );
   const [ids, setIds] = useState<number[]>(initialIds);
+  const [specialtyIds, setSpecialtyIds] = useState<number[]>(initialSpecialtyIds);
   const hasOther = sections.flatMap((s) => s.categories).some((c) => ids.includes(c.id) && c.slug === "outros");
 
   return (
     <form action={action} className="mt-3 space-y-3">
       <CategoryPicker sections={sections} value={ids} onChange={setIds} />
+      <SpecialtyPicker specialties={specialties} categories={sections.flatMap((s) => s.categories)} categoryIds={ids} value={specialtyIds} onChange={setSpecialtyIds} customDefault={initialCustomSpecialty} />
       {hasOther && (
         <div>
           <label className="label" htmlFor="custom_category">Qual serviço em “Outros”?</label>

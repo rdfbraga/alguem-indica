@@ -31,26 +31,29 @@ export function ListControls({
   order,
   kind,
   orders,
+  extra,
 }: {
   base: string;
   q?: string;
   order: Order;
   kind: Kind;
   orders: Order[];
+  /** Outros parâmetros da URL a manter (ex.: a especialidade escolhida). */
+  extra?: Record<string, string | undefined>;
 }) {
   const tipoParam = (k: Kind) => (k === "todos" ? undefined : k);
   return (
     <div className="space-y-2">
       <div className="flex gap-2 overflow-x-auto pb-1" aria-label="Ordenar por">
         {orders.map((o) => (
-          <Chip key={o} to={href(base, { q, ordem: o, tipo: tipoParam(kind) })} active={o === order}>
+          <Chip key={o} to={href(base, { ...extra, q, ordem: o, tipo: tipoParam(kind) })} active={o === order}>
             {ORDER_LABELS[o]}
           </Chip>
         ))}
       </div>
       <div className="flex gap-2 overflow-x-auto pb-1" aria-label="Filtrar por tipo">
         {(Object.keys(KIND_LABELS) as Kind[]).map((k) => (
-          <Chip key={k} to={href(base, { q, ordem: order, tipo: tipoParam(k) })} active={k === kind}>
+          <Chip key={k} to={href(base, { ...extra, q, ordem: order, tipo: tipoParam(k) })} active={k === kind}>
             {KIND_LABELS[k]}
           </Chip>
         ))}

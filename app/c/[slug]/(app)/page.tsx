@@ -91,6 +91,9 @@ export default async function Home({
     .order("created_at", { ascending: false })
     .limit(200);
   const providers = (all ?? []) as ProviderRow[];
+  // Sugestões da busca: também as especialidades que existem no condomínio.
+  const usedSpecialties = [...new Set(providers.flatMap((p) => p.specialty_names ?? []))];
+  const searchSuggestions = [...suggestions, ...usedSpecialties.filter((n) => !suggestions.includes(n))];
   const topRated = sortProviders(providers.filter((p) => p.review_count > 0), "melhores").slice(0, 5);
   const topIds = new Set(topRated.map((p) => p.id));
   const newest = providers.filter((p) => !topIds.has(p.id)).slice(0, 5);
@@ -121,7 +124,7 @@ export default async function Home({
         <h1 className="text-2xl font-extrabold">Olá, {firstName}! 👋</h1>
         <p className="mt-1 font-semibold text-white">Precisando de alguém de confiança? Veja quem os seus vizinhos indicam.</p>
       </section>
-      <SearchBox slug={slug} q="" suggestions={suggestions} />
+      <SearchBox slug={slug} q="" suggestions={searchSuggestions} />
 
       {(ownedCount ?? 0) === 0 && <ProviderCta slug={slug} pending={pendingSelf} />}
 

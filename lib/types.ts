@@ -25,6 +25,10 @@ export type ProviderRow = {
   hours_text?: string | null;
   plan_active?: boolean;
   self_pending?: boolean;
+  custom_specialty?: string | null;
+  specialty_ids?: number[] | null;
+  specialty_slugs?: string[] | null;
+  specialty_names?: string[] | null;
   website?: string | null;
   owner_id?: string | null;
   owner_since?: string | null;

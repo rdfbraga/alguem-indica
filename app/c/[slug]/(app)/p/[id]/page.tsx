@@ -12,6 +12,7 @@ import { ShowcaseView } from "@/components/ShowcaseView";
 import { ShowcaseEditor } from "./ShowcaseEditor";
 import { ReplyBox } from "./ReplyBox";
 import { SITE_URL } from "@/lib/site";
+import { providerSpecialtyLabels, type Specialty } from "@/lib/specialties";
 import { profileOrigin, shareProfileLink, shareProfileText } from "@/lib/origin";
 import { Stars } from "@/components/Stars";
 import { providerCategoryLabels, parseCategoryIds } from "@/lib/categories";
@@ -102,6 +103,11 @@ export default async function Prestador({
   const currentIds = p.category_ids?.length ? p.category_ids : p.category_id ? [p.category_id] : [];
   const wantedIds = parseCategoryIds((addcat ?? "").split(",")).filter((x) => !currentIds.includes(x));
   let sections: ReturnType<typeof groupCategories<CategoryGroup, Category>> = [];
+  let specialties: Specialty[] = [];
+  if (canEdit) {
+    const { data: sd } = await supabase.from("specialties").select("id,category_id,slug,name").order("sort");
+    specialties = (sd ?? []) as Specialty[];
+  }
   if (canEdit || wantedIds.length) {
     const [{ data: cd }, { data: gd }] = await Promise.all([
       supabase.from("categories").select("*").order("sort"),
@@ -196,6 +202,11 @@ export default async function Prestador({
             <div className="text-sm text-navy/60">
               {providerCategoryLabels(p).join(" · ")} · {p.kind === "resident" ? `Morador${p.block ? ` (Bloco ${p.block})` : ""}` : "Externo indicado por morador"}
             </div>
+            {providerSpecialtyLabels(p).length > 0 && (
+              <div className="mt-1 flex flex-wrap gap-1">
+                {providerSpecialtyLabels(p).map((l) => <span key={l} className="rounded-full bg-brand-50 px-2 py-0.5 text-xs font-bold text-brand-700">{l}</span>)}
+              </div>
+            )}
             <div className="mt-1 flex items-center gap-1">
               {p.review_count > 0 ? (
                 <><Stars value={p.avg_rating} /><span className="text-sm text-navy/60">{Number(p.avg_rating).toFixed(1)} ({p.review_count})</span></>
@@ -235,8 +246,8 @@ export default async function Prestador({
         )}
         {canEdit && sections.length > 0 && (
           <details className="rounded-2xl border border-navy/10 p-3">
-            <summary className="cursor-pointer text-sm font-bold text-sky-brand">✏️ Editar categorias</summary>
-            <EditCategories slug={slug} providerId={p.id} sections={sections} initialIds={currentIds} initialCustom={p.custom_category ?? ""} />
+            <summary className="cursor-pointer text-sm font-bold text-sky-brand">✏️ Editar categorias e especialidades</summary>
+            <EditCategories slug={slug} providerId={p.id} sections={sections} initialIds={currentIds} initialCustom={p.custom_category ?? ""} specialties={specialties} initialSpecialtyIds={p.specialty_ids ?? []} initialCustomSpecialty={p.custom_specialty ?? ""} />
           </details>
         )}
         {(isOwner || isSelfRegistrant) && (

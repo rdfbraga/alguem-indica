@@ -5,6 +5,8 @@ import type { Category, FormState } from "@/lib/types";
 import type { GroupLike, Section } from "@/lib/groups";
 import { CategoryPicker } from "@/components/CategoryPicker";
 import { PhotoField } from "@/components/PhotoField";
+import { SpecialtyPicker } from "@/components/SpecialtyPicker";
+import type { Specialty } from "@/lib/specialties";
 
 export function ProviderForm({
   slug,
@@ -13,6 +15,7 @@ export function ProviderForm({
   defaultBlock,
   defaultName,
   initialMode,
+  specialties,
 }: {
   slug: string;
   sections: Section<GroupLike, Category>[];
@@ -20,6 +23,7 @@ export function ProviderForm({
   defaultBlock: string;
   defaultName: string;
   initialMode: "self" | "other";
+  specialties: Specialty[];
 }) {
   const [state, action, pending] = useActionState<FormState, FormData>(createProvider.bind(null, slug), undefined);
   const [mode, setMode] = useState<"self" | "other">(initialMode);
@@ -27,6 +31,8 @@ export function ProviderForm({
   const [kind, setKind] = useState<"resident" | "external">("external");
   const [categoryIds, setCategoryIds] = useState<number[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [specialtyIds, setSpecialtyIds] = useState<number[]>([]);
+  const allCategories = sections.flatMap((s) => s.categories);
 
   const isOther = sections.flatMap((s) => s.categories).some((c) => categoryIds.includes(c.id) && c.slug === "outros");
 
@@ -66,6 +72,7 @@ export function ProviderForm({
         <CategoryPicker sections={sections} value={categoryIds} onChange={setCategoryIds} />
         <p className="mt-1 text-xs text-navy/60">Faz mais de um tipo de serviço? Adicione até 3 categorias no mesmo perfil.</p>
       </div>
+      <SpecialtyPicker specialties={specialties} categories={allCategories} categoryIds={categoryIds} value={specialtyIds} onChange={setSpecialtyIds} />
       {isOther && (
         <div>
           <label className="label" htmlFor="custom_category">Qual categoria?</label>

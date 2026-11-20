@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ProviderRow } from "@/lib/types";
 import { Stars } from "./Stars";
 import { providerCategoryLabels } from "@/lib/categories";
+import { providerSpecialtyLabels } from "@/lib/specialties";
 
 export function ProviderCard({ slug, p, planBadge = false }: { slug: string; p: ProviderRow; planBadge?: boolean }) {
   return (
@@ -21,6 +22,9 @@ export function ProviderCard({ slug, p, planBadge = false }: { slug: string; p: 
           {p.kind === "resident" ? ` · Morador${p.block ? ` (Bloco ${p.block})` : ""}` : " · Externo indicado"}
           {p.self_pending ? " · Cadastro próprio" : ""}
         </div>
+        {providerSpecialtyLabels(p).length > 0 && (
+          <div className="truncate text-xs font-semibold text-brand-700">{providerSpecialtyLabels(p).join(" · ")}</div>
+        )}
         <div className="mt-0.5 flex items-center gap-1 text-sm">
           {p.review_count > 0 ? (
             <>
