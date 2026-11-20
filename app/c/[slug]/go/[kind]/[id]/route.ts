@@ -3,6 +3,7 @@ import { getCondo, getFeatures, getUser } from "@/lib/condo";
 import { createClient } from "@/lib/supabase/server";
 import { whatsappLink } from "@/lib/phone";
 import { instagramUrl } from "@/lib/links";
+import { buildContactMessage, hourInSaoPaulo } from "@/lib/contact";
 
 export const dynamic = "force-dynamic";
 
@@ -38,12 +39,16 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   }
 
   const { data: p } = await supabase
-    .from("provider_listing").select("name,whatsapp,instagram,website").eq("id", id).eq("condo_id", condo.id).maybeSingle();
+    .from("provider_listing").select("name,whatsapp,instagram,website,category_slug").eq("id", id).eq("condo_id", condo.id).maybeSingle();
   if (!p) return back(`/c/${slug}`);
 
   let target: string | null = null;
   if (kind === "whatsapp") {
-    target = whatsappLink(p.whatsapp, `Olá, ${p.name}! Vi seu perfil no Alguém indica? (${condo.name}). Pode me ajudar?`);
+    const { data: me } = await supabase.from("members").select("full_name").eq("condo_id", condo.id).eq("user_id", user.id).maybeSingle();
+    target = whatsappLink(
+      p.whatsapp,
+      buildContactMessage({ providerName: p.name, residentName: me?.full_name, condoName: condo.name, categorySlug: p.category_slug, hour: hourInSaoPaulo() }),
+    );
   } else if (kind === "instagram" && p.instagram) {
     target = instagramUrl(p.instagram);
   } else if (kind === "website" && p.website && /^https?:\/\//i.test(p.website)) {
