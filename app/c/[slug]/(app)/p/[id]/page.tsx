@@ -4,6 +4,8 @@ import { getFeatures, getScope, requireMember } from "@/lib/condo";
 import { formatWhatsapp } from "@/lib/phone";
 import { instagramUrl, websiteLabel } from "@/lib/links";
 import { reviewAuthorLabel } from "@/lib/regions";
+import { InviteButton } from "@/components/InviteButton";
+import { buildInviteMessage } from "@/lib/invite";
 import { ViewTracker } from "@/components/ViewTracker";
 import type { ProviderStats } from "@/lib/stats";
 import type { Category, CategoryGroup, PhotoRow, ProviderRow, ReviewRow, ServiceRow } from "@/lib/types";
@@ -135,7 +137,11 @@ export default async function Prestador({
           <a href={shareHref} target="_blank" rel="noopener noreferrer" className="btn !bg-[#25D366] !px-4 !py-2 !text-sm hover:!bg-[#1ebe57]">📲 Compartilhar meu perfil no WhatsApp</a>
         </div>
       ) : novo ? (
-        <p className="rounded-2xl bg-green-50 p-3 text-sm font-semibold text-green-700">Indicação publicada! Obrigado por ajudar os vizinhos. 🎉</p>
+        <div className="space-y-2 rounded-2xl bg-green-50 p-3 text-sm text-green-800">
+          <p className="font-semibold text-green-700">Indicação publicada! Obrigado por ajudar os vizinhos. 🎉</p>
+          <p>Quer chamar mais vizinhos para avaliar e indicar também?</p>
+          <InviteButton url={`${siteUrl}/c/${slug}`} text={buildInviteMessage({ residentName: member.full_name, condoName: condo.name, url: `${siteUrl}/c/${slug}` })} />
+        </div>
       ) : null}
       {jaexiste && !reivindicar && <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-800">Este profissional já estava cadastrado. Que tal avaliá-lo?</p>}
       {askClaimHere && (

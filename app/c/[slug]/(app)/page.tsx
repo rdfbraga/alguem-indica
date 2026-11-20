@@ -8,6 +8,9 @@ import { ListControls } from "@/components/ListControls";
 import { SearchBox } from "@/components/SearchBox";
 import { AdCard } from "@/components/AdCard";
 import { ReviewPrompt, type ReviewPromptItem } from "@/components/ReviewPrompt";
+import { InviteButton } from "@/components/InviteButton";
+import { buildInviteMessage } from "@/lib/invite";
+import { SITE_URL } from "@/lib/site";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { ProviderCta } from "@/components/ProviderCta";
 import { adIsLive, todayInSaoPaulo } from "@/lib/features";
@@ -162,6 +165,12 @@ export default async function Home({
             </details>
           ))}
         </div>
+      </section>
+
+      <section className="card space-y-2 !bg-sky-soft/60">
+        <h2 className="font-extrabold">👋 Quanto mais vizinhos, melhor fica</h2>
+        <p className="text-sm text-navy/75">Chame os moradores do seu bloco. Com mais gente indicando e avaliando, todo mundo acha prestador bom mais rápido.</p>
+        <InviteButton url={`${SITE_URL}/c/${slug}`} text={buildInviteMessage({ residentName: member.full_name, condoName: condo.name, url: `${SITE_URL}/c/${slug}` })} />
       </section>
 
       {ad && <AdCard slug={slug} ad={ad} />}
