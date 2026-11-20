@@ -664,3 +664,11 @@ export async function adminHideFlagged(slug: string, fd: FormData) {
   await supabase.from("providers").update({ status: "hidden", flagged: false, flag_reason: null }).in("id", ids).eq("condo_id", condo.id);
   revalidatePath(`/c/${slug}`, "layout");
 }
+
+// "Como foi?": o morador diz que não contratou, e o convite para avaliar some.
+export async function dismissReviewPrompt(slug: string, providerId: string) {
+  const { supabase } = await requireMember(slug);
+  if (!UUID.test(providerId)) return;
+  await supabase.rpc("dismiss_review_prompt", { p_provider: providerId });
+  revalidatePath(`/c/${slug}`);
+}

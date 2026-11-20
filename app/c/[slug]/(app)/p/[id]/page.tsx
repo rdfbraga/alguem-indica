@@ -286,7 +286,7 @@ export default async function Prestador({
 
       {canShowcase && <ShowcaseView hours={p.hours_text ?? null} services={services} photos={photos} />}
 
-      {!mine && <ReviewForm slug={slug} providerId={p.id} />}
+      {!mine && <div id="avaliar" className="scroll-mt-20"><ReviewForm slug={slug} providerId={p.id} /></div>}
 
       <section className="space-y-3">
         <h2 className="font-semibold">Avaliações dos vizinhos ({reviews.length})</h2>

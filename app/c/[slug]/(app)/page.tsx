@@ -7,6 +7,7 @@ import { ProviderCard } from "@/components/ProviderCard";
 import { ListControls } from "@/components/ListControls";
 import { SearchBox } from "@/components/SearchBox";
 import { AdCard } from "@/components/AdCard";
+import { ReviewPrompt, type ReviewPromptItem } from "@/components/ReviewPrompt";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { ProviderCta } from "@/components/ProviderCta";
 import { adIsLive, todayInSaoPaulo } from "@/lib/features";
@@ -106,6 +107,10 @@ export default async function Home({
     ad = live.length ? live[Math.floor(Math.random() * live.length)] : null;
   }
 
+  // "Como foi?": quem o morador chamou há 1 a 14 dias e ainda não avaliou (ignora a falta da migration 0020)
+  const { data: promptData } = await supabase.rpc("review_prompts", { p_condo: condo.id });
+  const reviewPrompts = ((promptData ?? []) as ReviewPromptItem[]);
+
   const { count: ownedCount } = await supabase
     .from("providers").select("id", { count: "exact", head: true })
     .eq("condo_id", condo.id).eq("owner_id", user.id);
@@ -125,6 +130,8 @@ export default async function Home({
         <p className="mt-1 font-semibold text-white">Precisando de alguém de confiança? Veja quem os seus vizinhos indicam.</p>
       </section>
       <SearchBox slug={slug} q="" suggestions={searchSuggestions} />
+
+      <ReviewPrompt slug={slug} items={reviewPrompts} />
 
       {(ownedCount ?? 0) === 0 && <ProviderCta slug={slug} pending={pendingSelf} />}
 
