@@ -133,7 +133,11 @@ export default async function Prestador({
       {novo === "eu" ? (
         <div className="space-y-2 rounded-2xl bg-green-50 p-3 text-sm text-green-800">
           <p className="font-bold">Seu perfil está no ar! 🎉</p>
-          <p>A administração vai confirmar que é você e liberar o selo ✅. Enquanto isso, complete a foto e a descrição em “Editar perfil” e peça avaliações aos vizinhos.</p>
+          {isOwner ? (
+            <p>Você já é o dono confirmado ✅ (período de lançamento). Complete a foto e a descrição em “Editar perfil” e peça avaliações aos vizinhos.</p>
+          ) : (
+            <p>A administração vai confirmar que é você e liberar o selo ✅. Enquanto isso, complete a foto e a descrição em “Editar perfil” e peça avaliações aos vizinhos.</p>
+          )}
           <a href={shareHref} target="_blank" rel="noopener noreferrer" className="btn !bg-[#25D366] !px-4 !py-2 !text-sm hover:!bg-[#1ebe57]">📲 Compartilhar meu perfil no WhatsApp</a>
         </div>
       ) : novo ? (

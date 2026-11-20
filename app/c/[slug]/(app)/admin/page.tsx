@@ -34,6 +34,7 @@ export default async function AdminModerar({ params }: { params: Promise<{ slug:
   const { slug } = await params;
   const { condo, supabase } = await requireAdmin(slug);
 
+  const { data: autoUntil } = await supabase.rpc("condo_auto_approve", { p_condo: condo.id });
   const [{ data: flagged }, { data: reportsData }] = await Promise.all([
     supabase.from("provider_listing").select("*").eq("condo_id", condo.id).eq("flagged", true).order("created_at", { ascending: false }),
     supabase.from("reports").select("*").eq("condo_id", condo.id).eq("status", "open").order("created_at", { ascending: false }),
@@ -94,6 +95,11 @@ export default async function AdminModerar({ params }: { params: Promise<{ slug:
     <div className="space-y-8">
       <section className="space-y-3">
         <h2 className="font-semibold">🙋 Pedidos para assumir perfil ({claims.length})</h2>
+        {typeof autoUntil === "string" && (
+          <p className="rounded-2xl bg-green-50 p-3 text-sm text-green-800">
+            ⚡ Período de lançamento: quem cadastra o <b>próprio perfil</b> vira dono confirmado na hora, até {new Date(autoUntil).toLocaleDateString("pt-BR")}. Aqui aparecem só os pedidos para assumir o perfil de outra pessoa e os perfis com alerta.
+          </p>
+        )}
         {claims.map((c) => {
           const prov = claimProviders.find((x) => x.id === c.provider_id);
           const who = claimMembers.find((m) => m.user_id === c.user_id);

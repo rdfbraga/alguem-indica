@@ -1,6 +1,6 @@
 "use client";
 import { useActionState } from "react";
-import { platformAddAdminByEmail, platformCreateCondo, platformSaveRegion, platformUpdateCondo } from "../../../actions";
+import { platformAddAdminByEmail, platformCreateCondo, platformSaveRegion, platformSetAutoApprove, platformUpdateCondo } from "../../../actions";
 import type { FormState } from "@/lib/types";
 
 export type RegionOpt = { id: string; name: string };
@@ -107,6 +107,32 @@ export function AddAdminByEmailForm({ slug, condoId }: { slug: string; condoId: 
       <div className="flex gap-2">
         <input id={`ae-${condoId}`} name="email" type="email" required className="input !py-2" placeholder="pessoa@email.com" />
         <button disabled={pending} className="btn-secondary !px-3 !py-2 !text-sm">{pending ? "…" : "Adicionar"}</button>
+      </div>
+      <Feedback state={state} />
+    </form>
+  );
+}
+
+/** Período de lançamento: perfis cadastrados pelo próprio viram "confirmados" sozinhos até a data escolhida. */
+export function AutoApproveForm({ slug, condoId, until }: { slug: string; condoId: string; until: string | null }) {
+  const [state, action, pending] = useActionState<FormState, FormData>(platformSetAutoApprove.bind(null, slug, condoId), undefined);
+  const active = until !== null && new Date(until).getTime() > Date.now();
+  const def = active ? until!.slice(0, 10) : "";
+  return (
+    <form action={action} className="space-y-2">
+      <div className="text-sm font-extrabold">Aprovação automática de perfis próprios</div>
+      <p className="text-xs text-navy/60">
+        {active
+          ? `Ligada até ${new Date(until!).toLocaleDateString("pt-BR")}: quem cadastra o próprio perfil já vira dono confirmado. Pedidos para assumir o perfil de outra pessoa e perfis com alerta continuam com o administrador.`
+          : "Desligada: quem cadastra o próprio perfil espera a aprovação do administrador."}
+      </p>
+      <div className="flex flex-wrap items-end gap-2">
+        <div>
+          <label className="label !text-xs" htmlFor={`aa-${condoId}`}>Até o dia</label>
+          <input id={`aa-${condoId}`} name="until" type="date" defaultValue={def} className="input !py-2" />
+        </div>
+        <button disabled={pending} className="btn-secondary !px-3 !py-2 !text-sm">{pending ? "…" : "Ligar / alterar prazo"}</button>
+        {active && <button disabled={pending} name="off" value="1" formNoValidate className="text-sm font-semibold text-red-700 underline">Desligar</button>}
       </div>
       <Feedback state={state} />
     </form>

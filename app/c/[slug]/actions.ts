@@ -788,3 +788,23 @@ export async function platformAddAdminByEmail(slug: string, condoId: string, _: 
   revalidatePath(`/c/${slug}`, "layout");
   return { ok: "Administrador adicionado!" };
 }
+
+// Aprovação automática de perfis cadastrados pelo próprio (período de lançamento). Só o administrador da plataforma.
+export async function platformSetAutoApprove(slug: string, condoId: string, _: FormState, fd: FormData): Promise<FormState> {
+  const { supabase } = await requireAdmin(slug);
+  const off = fd.get("off") === "1";
+  const day = str(fd, "until"); // AAAA-MM-DD
+  let until: string | null = null;
+  if (!off) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return { error: "Escolha a data final." };
+    until = new Date(`${day}T23:59:59-03:00`).toISOString(); // fim do dia em São Paulo
+    if (Number.isNaN(Date.parse(until))) return { error: "Data inválida." };
+  }
+  const { error } = await supabase.rpc("platform_set_auto_approve", { p_condo: condoId, p_until: until });
+  if (error) {
+    console.error("platformSetAutoApprove", error.message);
+    return { error: platformError(error.message, "Não foi possível salvar.") };
+  }
+  revalidatePath(`/c/${slug}`, "layout");
+  return { ok: off ? "Aprovação automática desligada." : "Aprovação automática ligada!" };
+}

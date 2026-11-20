@@ -2,7 +2,7 @@ import Link from "next/link";
 import { requireAdmin } from "@/lib/condo";
 import { StatTile } from "@/components/StatTile";
 import { platformDeleteRegion, platformSetAdmin } from "../../../actions";
-import { AddAdminByEmailForm, EditCondoForm, NewCondoForm, RegionForm } from "./PlatformForms";
+import { AddAdminByEmailForm, AutoApproveForm, EditCondoForm, NewCondoForm, RegionForm } from "./PlatformForms";
 
 export const metadata = { title: "Condomínios — Admin" };
 
@@ -15,7 +15,7 @@ type Row = {
 const n = (v: number) => Number(v) || 0;
 const pending = (r: Row) => n(r.pend_feedback) + n(r.pend_claims) + n(r.pend_flagged) + n(r.pend_reports) + n(r.pend_categories) + n(r.pend_specialties);
 
-type PCondo = { id: string; slug: string; name: string; is_active: boolean; region_id: string | null; region_name: string | null; members: number; providers: number; admins: number };
+type PCondo = { auto_approve_until?: string | null; id: string; slug: string; name: string; is_active: boolean; region_id: string | null; region_name: string | null; members: number; providers: number; admins: number };
 type Person = { user_id: string; full_name: string; block: string; unit: string; email: string };
 type PRegion = { id: string; slug: string; name: string; condos: number };
 
@@ -127,6 +127,10 @@ export default async function AdminCondominios({
                 <div className="mt-3 space-y-3 rounded-2xl bg-sky-soft p-3">
                   <p className="text-xs text-navy/60">Link: /c/{c.slug} · {Number(c.providers)} prestadores · {Number(c.admins)} {Number(c.admins) === 1 ? "administrador" : "administradores"}</p>
                   <EditCondoForm slug={slug} condo={{ id: c.id, name: c.name, region_id: c.region_id, is_active: c.is_active }} regions={pRegions.map((r) => ({ id: r.id, name: r.name }))} />
+
+                  <div className="border-t border-navy/10 pt-3">
+                    <AutoApproveForm slug={slug} condoId={c.id} until={c.auto_approve_until ?? null} />
+                  </div>
 
                   <div className="space-y-2 border-t border-navy/10 pt-3">
                     <div className="text-sm font-extrabold">Administradores ({(adminsByCondo.get(c.id) ?? []).length})</div>
