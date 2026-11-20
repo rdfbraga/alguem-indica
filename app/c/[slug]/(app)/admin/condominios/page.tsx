@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/condo";
 import { StatTile } from "@/components/StatTile";
-import { platformDeleteRegion } from "../../../actions";
-import { EditCondoForm, NewCondoForm, RegionForm } from "./PlatformForms";
+import { platformDeleteRegion, platformSetAdmin } from "../../../actions";
+import { AddAdminByEmailForm, EditCondoForm, NewCondoForm, RegionForm } from "./PlatformForms";
 
 export const metadata = { title: "Condomínios — Admin" };
 
@@ -16,6 +16,7 @@ const n = (v: number) => Number(v) || 0;
 const pending = (r: Row) => n(r.pend_feedback) + n(r.pend_claims) + n(r.pend_flagged) + n(r.pend_reports) + n(r.pend_categories) + n(r.pend_specialties);
 
 type PCondo = { id: string; slug: string; name: string; is_active: boolean; region_id: string | null; region_name: string | null; members: number; providers: number; admins: number };
+type Person = { user_id: string; full_name: string; block: string; unit: string; email: string };
 type PRegion = { id: string; slug: string; name: string; condos: number };
 
 export default async function AdminCondominios({
@@ -23,10 +24,10 @@ export default async function AdminCondominios({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ erro?: string }>;
+  searchParams: Promise<{ erro?: string; adm?: string; aq?: string }>;
 }) {
   const { slug } = await params;
-  const { erro } = await searchParams;
+  const { erro, adm, aq } = await searchParams;
   const { supabase } = await requireAdmin(slug);
   const { data, error } = await supabase.rpc("admin_overview");
   // Administrador da plataforma: cria condomínios e regiões (se a migration 0024 ainda não rodou, o bloco não aparece).
@@ -34,10 +35,19 @@ export default async function AdminCondominios({
   const platform = (st ?? null) as { is_admin: boolean; has_any: boolean } | null;
   let pCondos: PCondo[] = [];
   let pRegions: PRegion[] = [];
+  const adminsByCondo = new Map<string, Person[]>();
+  let found: Person[] = [];
   if (platform?.is_admin) {
     const [c, r] = await Promise.all([supabase.rpc("platform_condos"), supabase.rpc("platform_regions")]);
     pCondos = (c.data ?? []) as PCondo[];
     pRegions = (r.data ?? []) as PRegion[];
+    const lists = await Promise.all(pCondos.map((c) => supabase.rpc("platform_condo_admins", { p_condo: c.id })));
+    pCondos.forEach((c, i) => adminsByCondo.set(c.id, ((lists[i].data ?? []) as Person[])));
+    const target = pCondos.find((c) => c.id === adm);
+    if (target && aq && aq.trim().length >= 2) {
+      const { data: f } = await supabase.rpc("platform_find_members", { p_condo: target.id, p_q: aq.trim().slice(0, 60) });
+      found = (f ?? []) as Person[];
+    }
   }
   const rows = ((data ?? []) as Row[]).sort((a, b) => pending(b) - pending(a) || a.name.localeCompare(b.name, "pt-BR"));
 
@@ -63,6 +73,9 @@ export default async function AdminCondominios({
     <div className="space-y-6">
       {erro === "regiao-com-condominios" && (
         <p className="rounded-2xl bg-amber-50 p-3 text-sm text-amber-900">Não dá para apagar a região: ainda há condomínios nela. Mova-os para outra região ou para nenhuma.</p>
+      )}
+      {erro === "ultimo-admin" && (
+        <p className="rounded-2xl bg-amber-50 p-3 text-sm text-amber-900">Cada condomínio precisa ter pelo menos um administrador. Adicione outro antes de remover este.</p>
       )}
       {platform && !platform.has_any && (
         <p className="rounded-2xl bg-sky-soft p-3 text-sm text-navy/80">
@@ -106,7 +119,7 @@ export default async function AdminCondominios({
           <div className="space-y-2">
             <div className="text-sm font-extrabold text-navy/70">Condomínios da plataforma ({pCondos.length})</div>
             {pCondos.map((c) => (
-              <details key={c.id} className="card !p-3">
+              <details key={c.id} className="card !p-3" open={adm === c.id}>
                 <summary className="flex cursor-pointer items-center justify-between gap-2">
                   <span className="min-w-0 truncate font-bold">{c.name}{!c.is_active && <span className="ml-1.5 rounded-full bg-red-50 px-1.5 py-0.5 align-middle text-[10px] font-bold text-red-700">INATIVO</span>}</span>
                   <span className="shrink-0 text-xs text-navy/55">{Number(c.members)} moradores · {c.region_name ?? "sem região"}</span>
@@ -114,6 +127,43 @@ export default async function AdminCondominios({
                 <div className="mt-3 space-y-3 rounded-2xl bg-sky-soft p-3">
                   <p className="text-xs text-navy/60">Link: /c/{c.slug} · {Number(c.providers)} prestadores · {Number(c.admins)} {Number(c.admins) === 1 ? "administrador" : "administradores"}</p>
                   <EditCondoForm slug={slug} condo={{ id: c.id, name: c.name, region_id: c.region_id, is_active: c.is_active }} regions={pRegions.map((r) => ({ id: r.id, name: r.name }))} />
+
+                  <div className="space-y-2 border-t border-navy/10 pt-3">
+                    <div className="text-sm font-extrabold">Administradores ({(adminsByCondo.get(c.id) ?? []).length})</div>
+                    <ul className="space-y-1.5">
+                      {(adminsByCondo.get(c.id) ?? []).map((a) => (
+                        <li key={a.user_id} className="flex items-center justify-between gap-2 text-sm">
+                          <span className="min-w-0"><b className="block truncate">{a.full_name}</b><span className="block truncate text-xs text-navy/55">{a.email}</span></span>
+                          <form action={platformSetAdmin.bind(null, slug, c.id, a.user_id, false)}>
+                            <button className="shrink-0 text-xs font-semibold text-red-700 underline">Remover</button>
+                          </form>
+                        </li>
+                      ))}
+                    </ul>
+                    <form method="get" className="space-y-1">
+                      <input type="hidden" name="adm" value={c.id} />
+                      <label className="label !text-xs" htmlFor={`aq-${c.id}`}>Procurar morador deste condomínio</label>
+                      <div className="flex gap-2">
+                        <input id={`aq-${c.id}`} name="aq" defaultValue={adm === c.id ? aq : ""} minLength={2} className="input !py-2" placeholder="nome ou e-mail" />
+                        <button className="btn-secondary !px-3 !py-2 !text-sm">Procurar</button>
+                      </div>
+                    </form>
+                    {adm === c.id && aq && (
+                      found.length > 0 ? (
+                        <ul className="space-y-1.5">
+                          {found.map((f) => (
+                            <li key={f.user_id} className="flex items-center justify-between gap-2 text-sm">
+                              <span className="min-w-0"><b className="block truncate">{f.full_name}</b><span className="block truncate text-xs text-navy/55">Bloco {f.block}, {f.unit} · {f.email}</span></span>
+                              <form action={platformSetAdmin.bind(null, slug, c.id, f.user_id, true)}>
+                                <button className="btn !px-3 !py-1.5 !text-xs">Tornar administrador</button>
+                              </form>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : <p className="text-xs text-navy/60">Nenhum morador encontrado (quem já é administrador não aparece).</p>
+                    )}
+                    <AddAdminByEmailForm slug={slug} condoId={c.id} />
+                  </div>
                 </div>
               </details>
             ))}

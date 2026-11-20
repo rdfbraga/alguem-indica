@@ -1,6 +1,6 @@
 "use client";
 import { useActionState } from "react";
-import { platformCreateCondo, platformSaveRegion, platformUpdateCondo } from "../../../actions";
+import { platformAddAdminByEmail, platformCreateCondo, platformSaveRegion, platformUpdateCondo } from "../../../actions";
 import type { FormState } from "@/lib/types";
 
 export type RegionOpt = { id: string; name: string };
@@ -95,6 +95,20 @@ export function RegionForm({ slug, region }: { slug: string; region?: RegionOpt 
       )}
       <Feedback state={state} />
       <button disabled={pending} className="btn !px-4 !py-2 !text-sm">{pending ? "Salvando…" : region ? "Salvar" : "Criar região"}</button>
+    </form>
+  );
+}
+
+export function AddAdminByEmailForm({ slug, condoId }: { slug: string; condoId: string }) {
+  const [state, action, pending] = useActionState<FormState, FormData>(platformAddAdminByEmail.bind(null, slug, condoId), undefined);
+  return (
+    <form action={action} className="space-y-2">
+      <label className="label !text-xs" htmlFor={`ae-${condoId}`}>Adicionar por e-mail</label>
+      <div className="flex gap-2">
+        <input id={`ae-${condoId}`} name="email" type="email" required className="input !py-2" placeholder="pessoa@email.com" />
+        <button disabled={pending} className="btn-secondary !px-3 !py-2 !text-sm">{pending ? "…" : "Adicionar"}</button>
+      </div>
+      <Feedback state={state} />
     </form>
   );
 }

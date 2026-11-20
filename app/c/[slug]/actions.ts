@@ -763,3 +763,28 @@ export async function platformDeleteRegion(slug: string, regionId: string) {
   if (error?.message?.includes("region_not_empty")) redirect(`/c/${slug}/admin/condominios?erro=regiao-com-condominios`);
   if (error) console.error("platformDeleteRegion", error.message);
 }
+
+// Administradores de cada condomínio (só o administrador da plataforma; o banco confirma).
+export async function platformSetAdmin(slug: string, condoId: string, userId: string, makeAdmin: boolean) {
+  const { supabase } = await requireAdmin(slug);
+  if (!UUID.test(condoId) || !UUID.test(userId)) return;
+  const { error } = await supabase.rpc("platform_set_admin", { p_condo: condoId, p_user: userId, p_admin: makeAdmin });
+  revalidatePath(`/c/${slug}`, "layout");
+  if (error?.message?.includes("ultimo_admin")) redirect(`/c/${slug}/admin/condominios?erro=ultimo-admin&adm=${condoId}`);
+  if (error) console.error("platformSetAdmin", error.message);
+  redirect(`/c/${slug}/admin/condominios?adm=${condoId}`);
+}
+
+export async function platformAddAdminByEmail(slug: string, condoId: string, _: FormState, fd: FormData): Promise<FormState> {
+  const { supabase } = await requireAdmin(slug);
+  const email = str(fd, "email");
+  if (!email.includes("@")) return { error: "Informe um e-mail válido." };
+  const { error } = await supabase.rpc("platform_add_admin_by_email", { p_condo: condoId, p_email: email });
+  if (error) {
+    if (error.message?.includes("usuario_nao_encontrado")) return { error: "Não achei esse e-mail. A pessoa precisa entrar no app uma vez (pode ser em qualquer condomínio) para ter conta." };
+    console.error("platformAddAdminByEmail", error.message);
+    return { error: platformError(error.message, "Não foi possível adicionar.") };
+  }
+  revalidatePath(`/c/${slug}`, "layout");
+  return { ok: "Administrador adicionado!" };
+}
