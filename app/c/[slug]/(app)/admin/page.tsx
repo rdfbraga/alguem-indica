@@ -34,10 +34,9 @@ export default async function AdminModerar({ params }: { params: Promise<{ slug:
   const { slug } = await params;
   const { condo, supabase } = await requireAdmin(slug);
 
-  const [{ data: flagged }, { data: reportsData }, { data: recent }] = await Promise.all([
+  const [{ data: flagged }, { data: reportsData }] = await Promise.all([
     supabase.from("provider_listing").select("*").eq("condo_id", condo.id).eq("flagged", true).order("created_at", { ascending: false }),
     supabase.from("reports").select("*").eq("condo_id", condo.id).eq("status", "open").order("created_at", { ascending: false }),
-    supabase.from("provider_listing").select("*").eq("condo_id", condo.id).order("created_at", { ascending: false }).limit(30),
   ]);
 
   const [{ data: pendingData }, { data: catData }, { data: groupData }] = await Promise.all([
@@ -262,7 +261,7 @@ export default async function AdminModerar({ params }: { params: Promise<{ slug:
       </Link>
 
       <section className="space-y-3">
-        <h2 className="font-semibold">⚠️ Possíveis duplicidades / inconsistências ({(flagged ?? []).length})</h2>
+        <h2 className="font-semibold">⚠️ Inconsistências (duplicidades e conteúdo suspeito) ({(flagged ?? []).length})</h2>
         {(flagged ?? []).length > 0 && (
           <FlaggedList
             slug={slug}
@@ -300,20 +299,6 @@ export default async function AdminModerar({ params }: { params: Promise<{ slug:
         {reports.length === 0 && <p className="text-sm text-navy/60">Sem denúncias abertas.</p>}
       </section>
 
-      <section className="space-y-3">
-        <h2 className="font-semibold">Últimos cadastros</h2>
-        {((recent ?? []) as ProviderRow[]).map((p) => (
-          <div key={p.id} className="card flex items-center justify-between gap-2">
-            <div className="min-w-0">
-              <Link href={`/c/${slug}/p/${p.id}`} className="block truncate font-medium underline">{p.name}</Link>
-              <span className="text-xs text-navy/60">{p.category_name} · {p.review_count} aval. {p.status === "hidden" ? "· OCULTO" : ""}</span>
-            </div>
-            <form action={adminSetProviderStatus.bind(null, slug, p.id, p.status === "hidden" ? "active" : "hidden")}>
-              <button className="btn-secondary !px-3 !py-2 !text-sm">{p.status === "hidden" ? "Reexibir" : "Ocultar"}</button>
-            </form>
-          </div>
-        ))}
-      </section>
     </div>
   );
 }

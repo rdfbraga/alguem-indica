@@ -17,7 +17,7 @@ import { profileOrigin, shareProfileLink, shareProfileText } from "@/lib/origin"
 import { Stars } from "@/components/Stars";
 import { providerCategoryLabels, parseCategoryIds } from "@/lib/categories";
 import { groupCategories } from "@/lib/groups";
-import { addCategoriesAndReturn, adminClearOwner, deleteReviewReply } from "../../../actions";
+import { addCategoriesAndReturn, adminClearOwner, adminSetProviderStatus, deleteReviewReply } from "../../../actions";
 import { EditCategories } from "./EditCategories";
 import { EditProfile } from "./EditProfile";
 import { ClaimProfile } from "./ClaimProfile";
@@ -269,6 +269,13 @@ export default async function Prestador({
         {!isOwner && !p.owner_id && (hasPendingClaim
           ? <p className="rounded-2xl bg-amber-50 p-3 text-sm text-amber-900">⏳ Seu pedido para assumir este perfil está em análise.</p>
           : <ClaimProfile slug={slug} providerId={p.id} />)}
+        {member.role === "admin" && (
+          <form action={adminSetProviderStatus.bind(null, slug, p.id, p.status === "hidden" ? "active" : "hidden")}>
+            <button className="btn-secondary !px-3 !py-2 !text-sm">
+              {p.status === "hidden" ? "Admin: reexibir este perfil" : "Admin: ocultar este perfil"}
+            </button>
+          </form>
+        )}
         {member.role === "admin" && p.owner_id && (
           <form action={adminClearOwner.bind(null, slug, p.id)}>
             <button className="text-xs font-semibold text-navy/50 underline">Admin: remover vínculo do dono</button>
