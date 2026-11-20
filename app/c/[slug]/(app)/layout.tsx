@@ -23,7 +23,13 @@ export default async function AppLayout({
     const { count: specCount } = await supabase
       .from("providers").select("id", { count: "exact", head: true })
       .eq("condo_id", condo.id).not("custom_specialty", "is", null).eq("custom_specialty_reviewed", false);
-    newMessages = (count ?? 0) + (claimCount ?? 0) + (specCount ?? 0);
+    const head = { count: "exact", head: true } as const;
+    const [flagged, reports, catCount] = await Promise.all([
+      supabase.from("providers").select("id", head).eq("condo_id", condo.id).eq("flagged", true),
+      supabase.from("reports").select("id", head).eq("condo_id", condo.id).eq("status", "open"),
+      supabase.from("providers").select("id", head).eq("condo_id", condo.id).not("custom_category", "is", null).eq("custom_category_reviewed", false),
+    ]);
+    newMessages = (count ?? 0) + (claimCount ?? 0) + (specCount ?? 0) + (flagged.count ?? 0) + (reports.count ?? 0) + (catCount.count ?? 0);
   }
   return (
     <div className="mx-auto min-h-screen max-w-2xl pb-24">

@@ -1,19 +1,12 @@
 import Link from "next/link";
-import { getFeatures, requireAdmin } from "@/lib/condo";
+import { requireAdmin } from "@/lib/condo";
 import type { Category, CategoryGroup, FeedbackRow, ProfileClaimRow, ProviderRow, ReviewRow } from "@/lib/types";
 import { formatWhatsapp } from "@/lib/phone";
-import { StatTile } from "@/components/StatTile";
-import { FEATURES, FEATURE_INFO } from "@/lib/features";
-import type { AdRow } from "@/lib/types";
-import { AdForm } from "./AdForm";
 import { KIND_BY_VALUE } from "@/lib/feedback";
 import { groupCategories } from "@/lib/groups";
 import { capitalizeFirst, findSimilarCategories, groupSuggestions } from "@/lib/suggestions";
 import {
   adminClearFlag,
-  adminDeleteAd,
-  adminSetAdActive,
-  adminSetFeature,
   adminDecideClaim,
   adminReplyFeedback,
   adminSetFeedbackStatus,
@@ -33,24 +26,18 @@ type Report = {
   review_id: string | null;
 };
 
-export default async function Admin({
-  params,
-  searchParams,
-}: {
-  params: Promise<{ slug: string }>;
-  searchParams: Promise<{ anuncio?: string }>;
-}) {
-  const { slug } = await params;
-  const sp = await searchParams;
-  const { condo, user, supabase } = await requireAdmin(slug);
-  const flags = await getFeatures(condo.id);
+export const metadata = { title: "Moderar — Admin" };
 
-  const [{ data: flagged }, { data: reportsData }, { data: recent }, { count: members }] = await Promise.all([
+export default async function AdminModerar({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const { condo, supabase } = await requireAdmin(slug);
+
+  const [{ data: flagged }, { data: reportsData }, { data: recent }] = await Promise.all([
     supabase.from("provider_listing").select("*").eq("condo_id", condo.id).eq("flagged", true).order("created_at", { ascending: false }),
     supabase.from("reports").select("*").eq("condo_id", condo.id).eq("status", "open").order("created_at", { ascending: false }),
     supabase.from("provider_listing").select("*").eq("condo_id", condo.id).order("created_at", { ascending: false }).limit(30),
-    supabase.from("members").select("*", { count: "exact", head: true }).eq("condo_id", condo.id),
   ]);
+
   const [{ data: pendingData }, { data: catData }, { data: groupData }] = await Promise.all([
     supabase.from("providers").select("id,name,custom_category")
       .eq("condo_id", condo.id).not("custom_category", "is", null).eq("custom_category_reviewed", false)
@@ -59,24 +46,6 @@ export default async function Admin({
     supabase.from("category_groups").select("id,slug,name,icon").order("sort"),
   ]);
   const groups = (groupData ?? []) as CategoryGroup[];
-
-  type CondoStats = { days: number; totals: { views: number; viewers: number; whatsapp: number; members: number; owners: number; providers: number }; top: { id: string; name: string; whatsapp: number; views: number }[] };
-  const { data: cs } = await supabase.rpc("condo_stats", { p_condo: condo.id, p_days: 30 });
-  const overview = (cs ?? null) as CondoStats | null;
-
-  // Planos ativos e anúncios (Etapa 2)
-  const { data: planRows } = await supabase
-    .from("provider_plans").select("provider_id,current_period_end,source")
-    .eq("condo_id", condo.id).gt("current_period_end", new Date().toISOString()).order("current_period_end");
-  const planNames = (planRows ?? []).length
-    ? ((await supabase.from("providers").select("id,name").in("id", (planRows ?? []).map((r) => r.provider_id))).data ?? [])
-    : [];
-  const { data: adsData } = await supabase.from("ads").select("*").eq("condo_id", condo.id).order("created_at", { ascending: false });
-  const ads = (adsData ?? []) as AdRow[];
-  type AdStat = { id: string; views: number; viewers: number; clicks: number };
-  const { data: adStatData } = ads.length ? await supabase.rpc("ad_stats", { p_condo: condo.id, p_days: 30 }) : { data: [] };
-  const adStats = new Map(((adStatData ?? []) as AdStat[]).map((a) => [a.id, a]));
-  const editingAd = sp.anuncio ? ads.find((a) => a.id === sp.anuncio) : undefined;
 
   // Especialidades escritas pelos moradores, aguardando análise
   const { count: specPending } = await supabase
@@ -119,107 +88,9 @@ export default async function Admin({
   const pMap = new Map((reportedProviders ?? []).map((p) => [p.id as string, p]));
   const rMap = new Map((reportedReviews ?? []).map((r) => [r.id as string, r as Pick<ReviewRow, "id" | "comment" | "author_label" | "status" | "provider_id">]));
 
+
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-xl font-bold">Painel admin</h1>
-        <p className="text-sm text-navy/60">{members ?? 0} moradores · {(recent ?? []).length}+ prestadores recentes</p>
-      </div>
-
-      {overview && (
-        <section className="space-y-3">
-          <h2 className="font-semibold">📈 Visão geral do condomínio (últimos {overview.days} dias)</h2>
-          <div className="grid grid-cols-2 gap-3">
-            <StatTile label="Moradores que visitaram perfis" value={overview.totals.viewers} hint={`de ${overview.totals.members} cadastrados`} />
-            <StatTile label="Visitas a perfis" value={overview.totals.views} />
-            <StatTile label="Cliques no WhatsApp" value={overview.totals.whatsapp} />
-            <StatTile label="Perfis com dono" value={overview.totals.owners} hint={`de ${overview.totals.providers} ativos`} />
-          </div>
-          {overview.top.length > 0 && (
-            <div className="card !p-3 text-sm">
-              <div className="mb-2 font-bold">Perfis com mais cliques no WhatsApp</div>
-              <ol className="space-y-1">
-                {overview.top.map((t, i) => (
-                  <li key={t.id} className="flex items-center justify-between gap-2">
-                    <span className="min-w-0 truncate">{i + 1}. <Link className="underline" href={`/c/${slug}/resultados?perfil=${t.id}`}>{t.name}</Link></span>
-                    <span className="shrink-0 tabular-nums text-navy/70">{t.whatsapp} cliques · {t.views} visitas</span>
-                  </li>
-                ))}
-              </ol>
-            </div>
-          )}
-        </section>
-      )}
-
-      <section className="space-y-3">
-        <h2 className="font-semibold">🧩 Funcionalidades do condomínio</h2>
-        <p className="text-sm text-navy/65">Tudo começa desligado e ninguém vê nada. Ligue uma por vez, quando quiser. Qualquer chave pode ser desligada a qualquer momento.</p>
-        <div className="space-y-2">
-          {FEATURES.map((f) => {
-            const info = FEATURE_INFO[f];
-            const on = flags[f];
-            return (
-              <div key={f} className="card flex items-start gap-3 !p-3">
-                <span className="text-2xl" aria-hidden>{info.icon}</span>
-                <div className="min-w-0 flex-1">
-                  <div className="font-bold">{info.label} <span className={`ml-1 rounded-full px-2 py-0.5 text-xs font-bold ${on ? "bg-green-50 text-green-700" : "bg-navy/10 text-navy/60"}`}>{on ? "Ligado" : "Desligado"}</span></div>
-                  <p className="text-sm text-navy/65">{info.description}</p>
-                </div>
-                <form action={adminSetFeature.bind(null, slug, f, !on)}>
-                  <button className={on ? "btn-secondary !px-3 !py-2 !text-sm" : "btn !px-3 !py-2 !text-sm"}>{on ? "Desligar" : "Ligar"}</button>
-                </form>
-              </div>
-            );
-          })}
-        </div>
-      </section>
-
-      {(flags.plans || (planRows ?? []).length > 0) && (
-        <section className="space-y-3">
-          <h2 className="font-semibold">⭐ Planos Destaque ativos ({(planRows ?? []).length})</h2>
-          {(planRows ?? []).map((r) => (
-            <div key={r.provider_id} className="card flex items-center justify-between gap-2 !p-3 text-sm">
-              <Link className="min-w-0 truncate font-bold underline" href={`/c/${slug}/p/${r.provider_id}`}>{planNames.find((n) => n.id === r.provider_id)?.name ?? "Perfil"}</Link>
-              <span className="shrink-0 text-navy/65">{r.source === "trial" ? "teste grátis" : "ativo"} · até {new Date(r.current_period_end as string).toLocaleDateString("pt-BR")}</span>
-            </div>
-          ))}
-          {(planRows ?? []).length === 0 && <p className="text-sm text-navy/60">Nenhum plano ativo. Para conceder, abra o perfil de um prestador (botão “Conceder”).</p>}
-        </section>
-      )}
-
-      {(flags.ads || ads.length > 0) && (
-        <section id="anuncios" className="space-y-3">
-          <h2 className="font-semibold">📢 Anunciantes locais ({ads.length}){!flags.ads && <span className="ml-2 text-xs font-normal text-navy/55">(chave desligada: nada aparece para os moradores)</span>}</h2>
-          {ads.map((a) => {
-            const st = adStats.get(a.id);
-            const ctr = st && st.views > 0 ? Math.round((st.clicks / st.views) * 1000) / 10 : null;
-            return (
-              <div key={a.id} className="card space-y-2 !p-3 text-sm">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <div className="font-extrabold">{a.title}</div>
-                    <div className="text-navy/65">{a.advertiser}{a.starts_on || a.ends_on ? ` · ${a.starts_on ? new Date(a.starts_on + "T12:00:00").toLocaleDateString("pt-BR") : "…"} a ${a.ends_on ? new Date(a.ends_on + "T12:00:00").toLocaleDateString("pt-BR") : "sem fim"}` : ""}</div>
-                  </div>
-                  <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-bold ${a.active ? "bg-green-50 text-green-700" : "bg-navy/10 text-navy/60"}`}>{a.active ? "Ativo" : "Pausado"}</span>
-                </div>
-                <p className="text-navy/75">
-                  Últimos 30 dias: <b>{st?.views ?? 0}</b> exibições para <b>{st?.viewers ?? 0}</b> {(st?.viewers ?? 0) === 1 ? "pessoa" : "pessoas"} · <b>{st?.clicks ?? 0}</b> cliques{ctr !== null ? ` (${String(ctr).replace(".", ",")}%)` : ""}
-                </p>
-                <div className="flex flex-wrap items-center gap-3">
-                  <Link href={`/c/${slug}/admin?anuncio=${a.id}#anuncios`} className="font-bold text-sky-brand underline">Editar</Link>
-                  <form action={adminSetAdActive.bind(null, slug, a.id, !a.active)}><button className="font-semibold text-navy/70 underline">{a.active ? "Pausar" : "Reativar"}</button></form>
-                  <form action={adminDeleteAd.bind(null, slug, a.id)}><button className="font-semibold text-red-700 underline">Excluir</button></form>
-                </div>
-              </div>
-            );
-          })}
-          <details className="card !p-3" open={Boolean(editingAd)}>
-            <summary className="cursor-pointer font-bold text-sky-brand">{editingAd ? `✏️ Editando: ${editingAd.title}` : "＋ Novo anúncio"}</summary>
-            <div className="mt-3"><AdForm key={editingAd?.id ?? "novo"} slug={slug} userId={user.id} ad={editingAd} /></div>
-          </details>
-        </section>
-      )}
-
       <section className="space-y-3">
         <h2 className="font-semibold">🙋 Pedidos para assumir perfil ({claims.length})</h2>
         {claims.map((c) => {
@@ -376,20 +247,12 @@ export default async function Admin({
         {suggestions.length === 0 && <p className="text-sm text-navy/60">Nenhuma sugestão pendente.</p>}
       </section>
 
-      <Link href={`/c/${slug}/admin/categorias`} className="card flex items-center gap-3 transition hover:border-brand-500">
-        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-50 text-xl">🗂️</span>
-        <span className="min-w-0 flex-1">
-          <b>Categorias</b>
-          <span className="block text-sm text-navy/65">Criar, editar, mover de grupo e excluir</span>
-        </span>
-      </Link>
-
       <Link href={`/c/${slug}/admin/especialidades`} className="card flex items-center gap-3 transition hover:border-brand-500">
         <span className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-50 text-xl">🩺</span>
         <span className="min-w-0 flex-1">
-          <b>Especialidades</b>
+          <b>Especialidades sugeridas ({specPending ?? 0})</b>
           <span className="block text-sm text-navy/65">
-            {(specPending ?? 0) > 0 ? `${specPending} ${specPending === 1 ? "sugestão aguardando" : "sugestões aguardando"} análise · ` : ""}Gerenciar a lista
+            {(specPending ?? 0) > 0 ? "Moradores escreveram em “Outra especialidade”. Toque para analisar." : "Nenhuma sugestão aguardando."}
           </span>
         </span>
         {(specPending ?? 0) > 0 && <span className="rounded-full bg-brand-500 px-2 py-0.5 text-xs font-bold text-white">{specPending}</span>}

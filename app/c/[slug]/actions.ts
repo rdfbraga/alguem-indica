@@ -525,7 +525,7 @@ export async function adminSaveAd(slug: string, adId: string | null, _: FormStat
     return { error: "Não foi possível salvar o anúncio." };
   }
   revalidatePath(`/c/${slug}`, "layout");
-  if (!adId) redirect(`/c/${slug}/admin#anuncios`);
+  if (!adId) redirect(`/c/${slug}/admin/configurar#anuncios`);
   return { ok: "Anúncio atualizado!" };
 }
 

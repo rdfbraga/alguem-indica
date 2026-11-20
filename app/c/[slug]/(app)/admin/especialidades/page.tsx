@@ -60,8 +60,8 @@ export default async function AdminEspecialidades({
   return (
     <div className="space-y-8">
       <div>
-        <Link href={`/c/${slug}/admin`} className="text-sm text-navy/60">← Painel admin</Link>
-        <h1 className="mt-1 text-xl font-bold">🩺 Especialidades</h1>
+        <Link href={`/c/${slug}/admin/configurar`} className="text-sm text-navy/60">← Configurar</Link>
+        <h1 className="mt-1 text-lg font-bold">🩺 Especialidades</h1>
         <p className="text-sm text-navy/65">
           A lista é <b>a mesma para todos os condomínios</b>, como a de categorias. Aqui você aprova o que os moradores escrevem em “Outra especialidade” e cuida da lista.
         </p>

@@ -31,8 +31,8 @@ export default async function AdminCategorias({
   return (
     <div className="space-y-6">
       <div>
-        <Link href={`/c/${slug}/admin`} className="text-sm text-navy/60">← Painel admin</Link>
-        <h1 className="mt-1 text-xl font-bold">🗂️ Categorias</h1>
+        <Link href={`/c/${slug}/admin/configurar`} className="text-sm text-navy/60">← Configurar</Link>
+        <h1 className="mt-1 text-lg font-bold">🗂️ Categorias</h1>
         <p className="text-sm text-navy/65">
           A lista é <b>a mesma para todos os condomínios</b>. Aqui você cria, renomeia, move de grupo e exclui categorias.
         </p>
