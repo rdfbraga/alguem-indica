@@ -24,12 +24,15 @@ export default async function AdminLayout({
   // Quem administra mais de um condomínio ganha a aba "Condomínios" (se a migration 0022 ainda não rodou, a aba não aparece).
   const { data: ov } = await supabase.rpc("admin_overview");
   const rows = ((ov ?? []) as { condo_id: string; pend_feedback: number; pend_claims: number; pend_flagged: number; pend_reports: number; pend_categories: number; pend_specialties: number }[]);
+  const { data: st } = await supabase.rpc("platform_status");
+  const platform = (st ?? null) as { is_admin: boolean; has_any: boolean } | null;
+  const showCondos = rows.length > 1 || platform?.is_admin === true || (platform !== null && !platform.has_any);
   const otherPending = rows.filter((r) => r.condo_id !== condo.id)
     .reduce((n, r) => n + Number(r.pend_feedback) + Number(r.pend_claims) + Number(r.pend_flagged) + Number(r.pend_reports) + Number(r.pend_categories) + Number(r.pend_specialties), 0);
   return (
     <div className="space-y-5">
       <h1 className="text-xl font-bold">Painel admin</h1>
-      <AdminTabs slug={slug} pending={pending} multi={rows.length > 1} otherPending={otherPending} />
+      <AdminTabs slug={slug} pending={pending} multi={showCondos} otherPending={otherPending} />
       {children}
     </div>
   );

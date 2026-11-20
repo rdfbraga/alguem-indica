@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/condo";
 import { StatTile } from "@/components/StatTile";
+import { platformDeleteRegion } from "../../../actions";
+import { EditCondoForm, NewCondoForm, RegionForm } from "./PlatformForms";
 
 export const metadata = { title: "Condomínios — Admin" };
 
@@ -13,10 +15,30 @@ type Row = {
 const n = (v: number) => Number(v) || 0;
 const pending = (r: Row) => n(r.pend_feedback) + n(r.pend_claims) + n(r.pend_flagged) + n(r.pend_reports) + n(r.pend_categories) + n(r.pend_specialties);
 
-export default async function AdminCondominios({ params }: { params: Promise<{ slug: string }> }) {
+type PCondo = { id: string; slug: string; name: string; is_active: boolean; region_id: string | null; region_name: string | null; members: number; providers: number; admins: number };
+type PRegion = { id: string; slug: string; name: string; condos: number };
+
+export default async function AdminCondominios({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ erro?: string }>;
+}) {
   const { slug } = await params;
+  const { erro } = await searchParams;
   const { supabase } = await requireAdmin(slug);
   const { data, error } = await supabase.rpc("admin_overview");
+  // Administrador da plataforma: cria condomínios e regiões (se a migration 0024 ainda não rodou, o bloco não aparece).
+  const { data: st } = await supabase.rpc("platform_status");
+  const platform = (st ?? null) as { is_admin: boolean; has_any: boolean } | null;
+  let pCondos: PCondo[] = [];
+  let pRegions: PRegion[] = [];
+  if (platform?.is_admin) {
+    const [c, r] = await Promise.all([supabase.rpc("platform_condos"), supabase.rpc("platform_regions")]);
+    pCondos = (c.data ?? []) as PCondo[];
+    pRegions = (r.data ?? []) as PRegion[];
+  }
   const rows = ((data ?? []) as Row[]).sort((a, b) => pending(b) - pending(a) || a.name.localeCompare(b.name, "pt-BR"));
 
   if (error) {
@@ -39,6 +61,66 @@ export default async function AdminCondominios({ params }: { params: Promise<{ s
 
   return (
     <div className="space-y-6">
+      {erro === "regiao-com-condominios" && (
+        <p className="rounded-2xl bg-amber-50 p-3 text-sm text-amber-900">Não dá para apagar a região: ainda há condomínios nela. Mova-os para outra região ou para nenhuma.</p>
+      )}
+      {platform && !platform.has_any && (
+        <p className="rounded-2xl bg-sky-soft p-3 text-sm text-navy/80">
+          Para criar condomínios e regiões por aqui, defina quem é o administrador da plataforma: rode <code>supabase/tools/definir_admin_plataforma.sql</code> no Supabase com o seu e-mail.
+        </p>
+      )}
+      {platform?.is_admin && (
+        <section className="space-y-3">
+          <h2 className="font-semibold">🛠️ Plataforma</h2>
+          <details className="card !p-3">
+            <summary className="cursor-pointer font-bold text-sky-brand">＋ Novo condomínio</summary>
+            <div className="mt-3"><NewCondoForm slug={slug} regions={pRegions.map((r) => ({ id: r.id, name: r.name }))} /></div>
+          </details>
+
+          <div className="space-y-2">
+            <div className="text-sm font-extrabold text-navy/70">Regiões ({pRegions.length})</div>
+            {pRegions.map((r) => (
+              <details key={r.id} className="card !p-3">
+                <summary className="flex cursor-pointer items-center justify-between gap-2">
+                  <span className="font-bold">🗺️ {r.name}</span>
+                  <span className="shrink-0 text-xs text-navy/55">{Number(r.condos)} {Number(r.condos) === 1 ? "condomínio" : "condomínios"}</span>
+                </summary>
+                <div className="mt-3 space-y-3 rounded-2xl bg-sky-soft p-3">
+                  <RegionForm slug={slug} region={{ id: r.id, slug: r.slug, name: r.name }} />
+                  <details className="text-sm">
+                    <summary className="cursor-pointer font-semibold text-red-700">Apagar esta região</summary>
+                    <form action={platformDeleteRegion.bind(null, slug, r.id)} className="mt-2 space-y-2">
+                      <p className="text-navy/75">{Number(r.condos) > 0 ? "Ainda há condomínios nesta região: mova-os antes." : "Nenhum condomínio nela."} Não dá para desfazer.</p>
+                      <button disabled={Number(r.condos) > 0} className="btn-secondary !border-red-300 !px-3 !py-2 !text-sm !text-red-700 disabled:opacity-40">Sim, apagar</button>
+                    </form>
+                  </details>
+                </div>
+              </details>
+            ))}
+            <details className="card !p-3">
+              <summary className="cursor-pointer font-bold text-sky-brand">＋ Nova região</summary>
+              <div className="mt-3"><RegionForm slug={slug} /></div>
+            </details>
+          </div>
+
+          <div className="space-y-2">
+            <div className="text-sm font-extrabold text-navy/70">Condomínios da plataforma ({pCondos.length})</div>
+            {pCondos.map((c) => (
+              <details key={c.id} className="card !p-3">
+                <summary className="flex cursor-pointer items-center justify-between gap-2">
+                  <span className="min-w-0 truncate font-bold">{c.name}{!c.is_active && <span className="ml-1.5 rounded-full bg-red-50 px-1.5 py-0.5 align-middle text-[10px] font-bold text-red-700">INATIVO</span>}</span>
+                  <span className="shrink-0 text-xs text-navy/55">{Number(c.members)} moradores · {c.region_name ?? "sem região"}</span>
+                </summary>
+                <div className="mt-3 space-y-3 rounded-2xl bg-sky-soft p-3">
+                  <p className="text-xs text-navy/60">Link: /c/{c.slug} · {Number(c.providers)} prestadores · {Number(c.admins)} {Number(c.admins) === 1 ? "administrador" : "administradores"}</p>
+                  <EditCondoForm slug={slug} condo={{ id: c.id, name: c.name, region_id: c.region_id, is_active: c.is_active }} regions={pRegions.map((r) => ({ id: r.id, name: r.name }))} />
+                </div>
+              </details>
+            ))}
+          </div>
+        </section>
+      )}
+
       <section className="space-y-3">
         <h2 className="font-semibold">🏘️ Todos os seus condomínios ({rows.length})</h2>
         <div className="grid grid-cols-2 gap-3">

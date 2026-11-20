@@ -699,3 +699,67 @@ export async function adminClearProvidersFlags(slug: string, fd: FormData) {
   await supabase.from("providers").update({ flagged: false, flag_reason: null }).in("id", ids);
   revalidatePath(`/c/${slug}`, "layout");
 }
+
+// ─── Plataforma (Admin → Condomínios): condomínios e regiões. Só o administrador da plataforma; o banco confirma. ───
+function platformError(message: string | undefined, fallback: string): string {
+  const m = message ?? "";
+  if (m.includes("apenas o administrador da plataforma")) return "Só o administrador da plataforma pode fazer isso.";
+  if (m.includes("slug_invalido")) return "O endereço deve ter de 3 a 40 letras minúsculas, números e hífen (ex.: parque-barueri).";
+  if (m.includes("slug_em_uso")) return "Esse endereço já está em uso.";
+  if (m.includes("nome_invalido")) return "O nome deve ter de 2 a 80 letras.";
+  if (m.includes("regiao_invalida")) return "Região inválida.";
+  if (m.includes("region_not_empty")) return "Não dá para apagar: ainda há condomínios nesta região. Mova-os antes.";
+  return fallback;
+}
+const uuidOrNull = (v: FormDataEntryValue | null) => (typeof v === "string" && UUID.test(v) ? v : null);
+
+export async function platformCreateCondo(slug: string, _: FormState, fd: FormData): Promise<FormState> {
+  const { supabase } = await requireAdmin(slug);
+  const newSlug = str(fd, "slug").toLowerCase();
+  const { error } = await supabase.rpc("platform_create_condo", { p_slug: newSlug, p_name: str(fd, "name"), p_region: uuidOrNull(fd.get("region_id")) });
+  if (error) {
+    console.error("platformCreateCondo", error.message);
+    return { error: platformError(error.message, "Não foi possível criar o condomínio.") };
+  }
+  revalidatePath(`/c/${slug}`, "layout");
+  return { ok: `Condomínio criado! Link: /c/${newSlug} (você já é administrador dele).` };
+}
+
+export async function platformUpdateCondo(slug: string, condoId: string, _: FormState, fd: FormData): Promise<FormState> {
+  const { supabase } = await requireAdmin(slug);
+  const region = uuidOrNull(fd.get("region_id"));
+  const { error } = await supabase.rpc("platform_update_condo", {
+    p_condo: condoId, p_name: str(fd, "name"), p_region: region, p_active: fd.get("active") === "on",
+  });
+  if (error) {
+    if (error.message?.includes("whatsapp_conflict") && region) {
+      const { data } = await supabase.rpc("platform_region_conflicts", { p_condo: condoId, p_region: region });
+      const list = ((data ?? []) as { name_here: string; name_there: string; condo_there: string }[])
+        .slice(0, 5).map((c) => `“${c.name_here}” (aqui) e “${c.name_there}” (${c.condo_there})`).join("; ");
+      return { error: `Não dá para entrar nesta região: o mesmo WhatsApp está em perfis dos dois lados. Oculte ou apague um de cada par e tente de novo. ${list}` };
+    }
+    console.error("platformUpdateCondo", error.message);
+    return { error: platformError(error.message, "Não foi possível salvar.") };
+  }
+  revalidatePath(`/c/${slug}`, "layout");
+  return { ok: "Condomínio atualizado!" };
+}
+
+export async function platformSaveRegion(slug: string, regionId: string | null, _: FormState, fd: FormData): Promise<FormState> {
+  const { supabase } = await requireAdmin(slug);
+  const { error } = await supabase.rpc("platform_save_region", { p_id: regionId, p_slug: str(fd, "slug").toLowerCase(), p_name: str(fd, "name") });
+  if (error) {
+    console.error("platformSaveRegion", error.message);
+    return { error: platformError(error.message, "Não foi possível salvar a região.") };
+  }
+  revalidatePath(`/c/${slug}`, "layout");
+  return { ok: regionId ? "Região atualizada!" : "Região criada!" };
+}
+
+export async function platformDeleteRegion(slug: string, regionId: string) {
+  const { supabase } = await requireAdmin(slug);
+  const { error } = await supabase.rpc("platform_delete_region", { p_id: regionId });
+  revalidatePath(`/c/${slug}`, "layout");
+  if (error?.message?.includes("region_not_empty")) redirect(`/c/${slug}/admin/condominios?erro=regiao-com-condominios`);
+  if (error) console.error("platformDeleteRegion", error.message);
+}
