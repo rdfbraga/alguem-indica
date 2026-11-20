@@ -61,3 +61,17 @@ export function buildContactMessage(args: {
   const text = `${greetingFor(args.hour)}, ${shortProviderName(args.providerName)}! ${intro} Vi seu perfil no Alguém indica? e ${INTENT_TEXT[contactIntent(args.categorySlug)]}. Pode me ajudar?`;
   return args.profileUrl ? `${text}\n\nSeu perfil: ${args.profileUrl}` : text;
 }
+
+/** Mensagem que vai preenchida ao tocar no botão de um anúncio com WhatsApp. O anunciante entende de onde veio o contato. */
+export function buildAdMessage(args: {
+  advertiser: string;
+  adTitle: string;
+  residentName?: string | null;
+  condoName: string;
+  hour: number;
+}): string {
+  const who = args.residentName?.trim().split(/\s+/)[0];
+  const condo = bareCondoName(args.condoName);
+  const intro = who ? `Meu nome é ${who} e moro no condomínio ${condo}.` : `Moro no condomínio ${condo}.`;
+  return `${greetingFor(args.hour)}! ${intro} Vi o anúncio “${args.adTitle.trim()}” de ${args.advertiser.trim()} no Alguém indica? e gostaria de saber mais. Pode me ajudar?`;
+}

@@ -3,7 +3,7 @@ import { getCondo, getFeatures, getUser } from "@/lib/condo";
 import { createClient } from "@/lib/supabase/server";
 import { whatsappLink } from "@/lib/phone";
 import { instagramUrl } from "@/lib/links";
-import { buildContactMessage, hourInSaoPaulo } from "@/lib/contact";
+import { buildAdMessage, buildContactMessage, hourInSaoPaulo } from "@/lib/contact";
 import { SITE_URL } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
@@ -26,11 +26,18 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
   if (kind === "ad") {
     // Anúncio: só se a chave estiver ligada e o anúncio vigente (o banco aplica isso via RLS e na função de registro).
-    const { data: ad } = await supabase.from("ads").select("advertiser,link_url,whatsapp,active").eq("id", id).eq("condo_id", condo.id).maybeSingle();
+    const { data: ad } = await supabase.from("ads").select("advertiser,title,link_url,whatsapp,active").eq("id", id).eq("condo_id", condo.id).maybeSingle();
     if (!ad || !ad.active || !(await getFeatures(condo.id)).ads) return back(`/c/${slug}`);
-    const adTarget = ad.link_url && /^https?:\/\//i.test(ad.link_url)
-      ? ad.link_url
-      : ad.whatsapp ? whatsappLink(ad.whatsapp, `Olá! Vi o anúncio de ${ad.advertiser} no Alguém indica? (${condo.name}).`) : null;
+    let adTarget: string | null = null;
+    if (ad.link_url && /^https?:\/\//i.test(ad.link_url)) {
+      adTarget = ad.link_url;
+    } else if (ad.whatsapp) {
+      const { data: me } = await supabase.from("members").select("full_name").eq("condo_id", condo.id).eq("user_id", user.id).maybeSingle();
+      adTarget = whatsappLink(
+        ad.whatsapp,
+        buildAdMessage({ advertiser: ad.advertiser, adTitle: ad.title, residentName: me?.full_name, condoName: condo.name, hour: hourInSaoPaulo() }),
+      );
+    }
     if (!adTarget) return back(`/c/${slug}`);
     await supabase.rpc("log_ad_event", { p_ad: id, p_kind: "click" });
     const adRes = NextResponse.redirect(adTarget, 302);

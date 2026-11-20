@@ -9,10 +9,9 @@ test("origem do perfil", () => {
   assert.equal(profileOrigin({}), "neighbor");
 });
 test("mensagem de compartilhamento", () => {
-  const t = shareProfileText({ name: "Bia Nails", categories: ["Manicure", "Depilação / Estética", "Massagista"], url: "https://x.com/c/y/p/1" });
-  assert.match(t, /\(Manicure \/ Depilação \/ Estética\)/);
-  assert.ok(t.endsWith("https://x.com/c/y/p/1"));
-  assert.equal(shareProfileText({ name: "A", categories: [], url: "u" }).includes("()"), false);
+  const t = shareProfileText({ categories: ["Manicure", "Depilação / Estética", "Massagista"], url: "https://x.com/c/y/p/1" });
+  assert.equal(t, "Oi, vizinhos! 👋 Meu perfil de *Manicure e Depilação / Estética* já está no Alguém indica?, o app de indicações do nosso condomínio.\n\nSe você já usou meu trabalho, me ajuda com uma avaliação? Leva 1 minuto:\nhttps://x.com/c/y/p/1\n\nValeu, vizinhos! 🙏");
+  assert.match(shareProfileText({ categories: [], url: "u" }), /^Oi, vizinhos! 👋 Meu perfil já está/);
   const link = shareProfileLink("olá & tudo bem?");
   assert.equal(link, "https://wa.me/?text=ol%C3%A1%20%26%20tudo%20bem%3F");
 });

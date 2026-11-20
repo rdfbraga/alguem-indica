@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildContactMessage, contactIntent, greetingFor, hourInSaoPaulo, shortProviderName, bareCondoName } from "./contact.ts";
+import { buildAdMessage, buildContactMessage, contactIntent, greetingFor, hourInSaoPaulo, shortProviderName, bareCondoName } from "./contact.ts";
 
 test("saudação pela hora", () => {
   assert.equal(greetingFor(5), "Bom dia");
@@ -39,4 +39,10 @@ test("mensagem completa", () => {
   assert.ok(m.length < 220);
   const withLink = buildContactMessage({ providerName: "Caio Eletricista", residentName: "Maria", condoName: "Parque Barueri", categorySlug: "eletricista", hour: 9, profileUrl: "https://www.alguemindica.app.br/c/parque-barueri/p/abc" });
   assert.equal(withLink, m.replace("Maria da Silva", "Maria") + "\n\nSeu perfil: https://www.alguemindica.app.br/c/parque-barueri/p/abc");
+});
+
+test("mensagem do anúncio", () => {
+  const m = buildAdMessage({ advertiser: "Pizzaria Boa", adTitle: "Pizza em dobro às terças", residentName: "Maria da Silva", condoName: "Condomínio Parque Barueri", hour: 19 });
+  assert.equal(m, "Boa noite! Meu nome é Maria e moro no condomínio Parque Barueri. Vi o anúncio “Pizza em dobro às terças” de Pizzaria Boa no Alguém indica? e gostaria de saber mais. Pode me ajudar?");
+  assert.match(buildAdMessage({ advertiser: "A", adTitle: "T", condoName: "X", hour: 8 }), /^Bom dia! Moro no condomínio X\./);
 });

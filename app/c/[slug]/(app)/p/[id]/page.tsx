@@ -96,7 +96,7 @@ export default async function Prestador({
   const origin = profileOrigin(p);
   const isSelfRegistrant = origin === "self_pending" && p.created_by === user.id;
   const siteUrl = SITE_URL;
-  const shareHref = shareProfileLink(shareProfileText({ name: p.name, categories: providerCategoryLabels(p), url: `${siteUrl}/c/${slug}/p/${p.id}` }));
+  const shareHref = shareProfileLink(shareProfileText({ categories: providerCategoryLabels(p), url: `${siteUrl}/c/${slug}/p/${p.id}` }));
   const askClaimHere = Boolean(reivindicar) && !isOwner && !p.owner_id && !hasPendingClaim;
   const alreadyOwned = Boolean(reivindicar) && !isOwner && Boolean(p.owner_id);
   const currentIds = p.category_ids?.length ? p.category_ids : p.category_id ? [p.category_id] : [];
