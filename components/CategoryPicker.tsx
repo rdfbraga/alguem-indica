@@ -1,4 +1,5 @@
 "use client";
+import { useState } from "react";
 import type { Category } from "@/lib/types";
 import type { GroupLike, Section } from "@/lib/groups";
 import { MAX_CATEGORIES } from "@/lib/categories";
@@ -18,6 +19,9 @@ export function CategoryPicker({
   const all = sections.flatMap((s) => s.categories);
   const byId = new Map(all.map((c) => [c.id, c]));
   const full = value.length >= max;
+  const [groupId, setGroupId] = useState<number | "">("");
+  const section = sections.find((s) => s.group.id === groupId);
+  const options = section ? section.categories.filter((c) => !value.includes(c.id)) : [];
 
   return (
     <div className="space-y-2">
@@ -43,21 +47,35 @@ export function CategoryPicker({
         );
       })}
       {!full && (
-        <select
-          value=""
-          onChange={(e) => e.target.value && onChange([...value, Number(e.target.value)])}
-          className="input"
-          aria-label={value.length === 0 ? "Escolher a categoria" : "Adicionar outra categoria"}
-        >
-          <option value="">{value.length === 0 ? "Escolha a categoria…" : "＋ Também atende outro tipo de serviço?"}</option>
-          {sections.map((sec) => (
-            <optgroup key={sec.group.id} label={`${sec.group.icon} ${sec.group.name}`}>
-              {sec.categories.filter((c) => !value.includes(c.id)).map((c) => (
-                <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
-              ))}
-            </optgroup>
-          ))}
-        </select>
+        <div className="space-y-2">
+          <select
+            value={groupId}
+            onChange={(e) => setGroupId(e.target.value === "" ? "" : Number(e.target.value))}
+            className="input"
+            aria-label="Tipo de serviço"
+          >
+            <option value="">{value.length === 0 ? "1. Escolha o tipo de serviço…" : "＋ Também atende outro tipo de serviço?"}</option>
+            {sections.map((sec) => (
+              <option key={sec.group.id} value={sec.group.id}>{sec.group.icon} {sec.group.name}</option>
+            ))}
+          </select>
+          {section && (
+            <select
+              value=""
+              onChange={(e) => {
+                if (!e.target.value) return;
+                onChange([...value, Number(e.target.value)]);
+                setGroupId("");
+              }}
+              className="input"
+              aria-label="Escolher a categoria"
+              autoFocus
+            >
+              <option value="">2. Escolha a categoria…</option>
+              {options.map((c) => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
+            </select>
+          )}
+        </div>
       )}
       {full && <p className="text-xs text-navy/60">Máximo de {max} categorias por perfil.</p>}
     </div>
