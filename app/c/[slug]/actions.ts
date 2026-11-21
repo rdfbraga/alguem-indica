@@ -851,6 +851,13 @@ export async function setRequestNotify(slug: string, key: string, on: boolean) {
   revalidatePath(`/c/${slug}`, "layout");
 }
 
+// O administrador oculta (ou reexibe) um item do bloco "Os vizinhos estão procurando". Vale para a região.
+export async function adminHideRequest(slug: string, key: string, label: string, hide: boolean) {
+  const { condo, supabase } = await requireAdmin(slug);
+  await supabase.rpc("admin_hide_request", { p_condo: condo.id, p_key: key, p_label: label, p_hide: hide });
+  revalidatePath(`/c/${slug}`, "layout");
+}
+
 export async function ackRequestUpdate(slug: string, id: string) {
   const { supabase } = await requireMember(slug);
   if (!UUID.test(id)) return;

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ackRequestUpdate, cancelIndicationRequest, requestWithNotify, setRequestNotify } from "@/app/c/[slug]/actions";
+import { ackRequestUpdate, adminHideRequest, cancelIndicationRequest, requestWithNotify, setRequestNotify } from "@/app/c/[slug]/actions";
 import { RequestForm } from "./RequestForm";
 
 export type OpenRequest = { group_key: string; label: string; category_slug: string | null; n: number; i_asked: boolean; i_notify?: boolean; i_searched?: boolean };
@@ -8,7 +8,7 @@ export type RequestUpdate = { id: string; label: string; category_slug: string |
 const TOP = 4;
 
 /** Home: "🎉 agora tem indicação" (para quem pediu) e "🔎 Os vizinhos estão procurando" (pedidos sem prestador, da região). */
-export function NeighborsLooking({ slug, requests, updates }: { slug: string; requests: OpenRequest[]; updates: RequestUpdate[] }) {
+export function NeighborsLooking({ slug, requests, updates, isAdmin = false }: { slug: string; requests: OpenRequest[]; updates: RequestUpdate[]; isAdmin?: boolean }) {
   const href = (r: { label: string; category_slug: string | null }) =>
     `/c/${slug}/novo?servico=${encodeURIComponent(r.label)}${r.category_slug ? `&cat=${encodeURIComponent(r.category_slug)}` : ""}`;
   const shown = requests.slice(0, TOP);
@@ -23,6 +23,11 @@ export function NeighborsLooking({ slug, requests, updates }: { slug: string; re
       </div>
       <div className="flex shrink-0 flex-col items-end gap-1">
         <Link href={href(r)} className="btn !px-3 !py-1.5 !text-xs">Eu conheço alguém</Link>
+        {isAdmin && (
+          <form action={adminHideRequest.bind(null, slug, r.group_key, r.label, true)}>
+            <button className="text-[11px] font-semibold text-red-700 underline" title="Só o administrador vê este botão">Ocultar (admin)</button>
+          </form>
+        )}
         {!r.i_asked && r.i_searched && (
           <form action={requestWithNotify.bind(null, slug, r.label)}>
             <button className="text-[11px] font-semibold text-sky-brand underline">🔔 Avisar por e-mail</button>

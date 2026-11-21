@@ -15,6 +15,7 @@ import {
   adminCreateCategory,
   adminDismissSuggestion,
   adminDecideRequest,
+  adminHideRequest,
   adminMoveToCategory,
   adminResolveReport,
   adminSetProviderStatus,
@@ -37,6 +38,8 @@ export default async function AdminModerar({ params }: { params: Promise<{ slug:
 
   const { data: pendReq } = await supabase.rpc("admin_pending_requests", { p_condo: condo.id });
   const pendingRequests = (pendReq ?? []) as { id: string; label: string; flag_reason: string | null }[];
+  const { data: hiddenData } = await supabase.rpc("admin_hidden_requests", { p_condo: condo.id });
+  const hiddenRequests = (hiddenData ?? []) as { group_key: string; label: string }[];
   const { data: autoUntil } = await supabase.rpc("condo_auto_approve", { p_condo: condo.id });
   const [{ data: flagged }, { data: reportsData }] = await Promise.all([
     supabase.from("provider_listing").select("*").eq("condo_id", condo.id).eq("flagged", true).order("created_at", { ascending: false }),
@@ -143,6 +146,22 @@ export default async function AdminModerar({ params }: { params: Promise<{ slug:
             </div>
           ))}
         </section>
+      )}
+
+      {hiddenRequests.length > 0 && (
+        <details className="card !p-3 text-sm">
+          <summary className="cursor-pointer font-bold text-sky-brand">🙈 Itens ocultados em “Os vizinhos estão procurando” ({hiddenRequests.length})</summary>
+          <ul className="mt-3 space-y-2">
+            {hiddenRequests.map((h) => (
+              <li key={h.group_key} className="flex items-center justify-between gap-2">
+                <span className="min-w-0 truncate font-semibold">{h.label}</span>
+                <form action={adminHideRequest.bind(null, slug, h.group_key, h.label, false)}>
+                  <button className="btn-secondary !px-3 !py-1.5 !text-xs">Reexibir</button>
+                </form>
+              </li>
+            ))}
+          </ul>
+        </details>
       )}
 
       <section className="space-y-3">

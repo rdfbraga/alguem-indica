@@ -184,7 +184,7 @@ export default async function Home({
         </div>
       </section>
 
-      <NeighborsLooking slug={slug} requests={openRequests} updates={requestUpdates} />
+      <NeighborsLooking slug={slug} requests={openRequests} updates={requestUpdates} isAdmin={member.role === "admin"} />
 
       <section className="card space-y-2 !bg-sky-soft/60">
         <h2 className="font-extrabold">👋 Quanto mais vizinhos, melhor fica</h2>
