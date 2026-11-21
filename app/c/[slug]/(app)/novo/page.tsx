@@ -10,7 +10,7 @@ export default async function Novo({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ eu?: string }>;
+  searchParams: Promise<{ eu?: string; servico?: string; cat?: string }>;
 }) {
   const { slug } = await params;
   const sp = await searchParams;
@@ -22,11 +22,18 @@ export default async function Novo({
   const { data: specData } = await supabase.from("specialties").select("id,category_id,slug,name").order("sort");
   const specialties = (specData ?? []) as Specialty[];
   const sections = groupCategories((groupData ?? []) as CategoryGroup[], (data ?? []) as Category[]);
+  // Vindo de "Eu conheço alguém": já escolhe a categoria (ou "Outros" com o serviço escrito).
+  const cats = (data ?? []) as Category[];
+  const wanted = (sp.servico ?? "").trim().slice(0, 60);
+  const fromCat = cats.find((c) => c.slug === sp.cat);
+  const other = cats.find((c) => c.slug === "outros");
+  const initialCategoryIds = fromCat ? [fromCat.id] : wanted && other ? [other.id] : [];
+  const initialCustom = !fromCat && wanted ? wanted : "";
   return (
     <div className="space-y-4">
       <Link href={`/c/${slug}`} className="text-sm text-navy/60">← Voltar</Link>
       <h1 className="text-xl font-bold">Cadastrar um prestador</h1>
-      <ProviderForm slug={slug} sections={sections} userId={user.id} defaultBlock={member.block} defaultName={member.full_name} initialMode={sp.eu ? "self" : "other"} specialties={specialties} />
+      <ProviderForm slug={slug} sections={sections} userId={user.id} defaultBlock={member.block} defaultName={member.full_name} initialMode={sp.eu ? "self" : "other"} specialties={specialties} initialCategoryIds={initialCategoryIds} initialCustom={initialCustom} />
     </div>
   );
 }

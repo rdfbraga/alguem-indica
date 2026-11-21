@@ -16,6 +16,8 @@ export function ProviderForm({
   defaultName,
   initialMode,
   specialties,
+  initialCategoryIds = [],
+  initialCustom = "",
 }: {
   slug: string;
   sections: Section<GroupLike, Category>[];
@@ -24,12 +26,14 @@ export function ProviderForm({
   defaultName: string;
   initialMode: "self" | "other";
   specialties: Specialty[];
+  initialCategoryIds?: number[];
+  initialCustom?: string;
 }) {
   const [state, action, pending] = useActionState<FormState, FormData>(createProvider.bind(null, slug), undefined);
   const [mode, setMode] = useState<"self" | "other">(initialMode);
   const self = mode === "self";
   const [kind, setKind] = useState<"resident" | "external">("external");
-  const [categoryIds, setCategoryIds] = useState<number[]>([]);
+  const [categoryIds, setCategoryIds] = useState<number[]>(initialCategoryIds);
   const [uploading, setUploading] = useState(false);
   const [specialtyIds, setSpecialtyIds] = useState<number[]>([]);
   const allCategories = sections.flatMap((s) => s.categories);
@@ -76,7 +80,7 @@ export function ProviderForm({
       {isOther && (
         <div className="space-y-1 rounded-2xl border-2 border-brand-500/50 bg-brand-50/60 p-3">
           <label className="label" htmlFor="custom_category">✍️ Qual é o tipo de serviço? (sugestão de categoria nova)</label>
-          <input id="custom_category" name="custom_category" required minLength={2} maxLength={40} autoFocus className="input" placeholder="Ex.: Costureira, Fotógrafo, Tapeceiro…" />
+          <input id="custom_category" name="custom_category" required minLength={2} maxLength={40} autoFocus defaultValue={initialCustom} className="input" placeholder="Ex.: Costureira, Fotógrafo, Tapeceiro…" />
           <p className="text-xs text-navy/70">Pronto, é só isso. A indicação já fica publicada e a administração analisa: se fizer sentido, cria a categoria e move o perfil para ela. Se a categoria já existir com outro nome, ela também ajusta para você.</p>
         </div>
       )}

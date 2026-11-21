@@ -808,3 +808,43 @@ export async function platformSetAutoApprove(slug: string, condoId: string, _: F
   revalidatePath(`/c/${slug}`, "layout");
   return { ok: off ? "Aprovação automática desligada." : "Aprovação automática ligada!" };
 }
+
+// ─── "Os vizinhos estão procurando": pedidos de indicação (valem para a região) ───
+export async function requestIndication(slug: string, _: FormState, fd: FormData): Promise<FormState> {
+  const { condo, supabase } = await requireMember(slug);
+  const label = str(fd, "label").replace(/\s+/g, " ");
+  if (label.length < 2 || label.length > 60) return { error: "Escreva o serviço em poucas palavras (de 2 a 60 letras)." };
+  const { data, error } = await supabase.rpc("request_indication", { p_condo: condo.id, p_label: label });
+  if (error) {
+    if (error.message?.includes("limite_diario")) return { error: "Você já fez vários pedidos hoje. Tente de novo amanhã." };
+    console.error("requestIndication", error.message);
+    return { error: "Não foi possível enviar o pedido." };
+  }
+  revalidatePath(`/c/${slug}`, "layout");
+  switch (data) {
+    case "ja_existe": return { error: `Já existem indicações para isso. Busque por “${label}” na tela inicial.` };
+    case "ja_pediu": return { ok: "Você já tinha pedido isso. Assim que alguém indicar, avisamos aqui." };
+    case "em_analise": return { ok: "Pedido enviado! Ele aparece para os vizinhos depois de uma conferência da administração." };
+    default: return { ok: "Pedido enviado! Os vizinhos vão ver e, se alguém indicar, avisamos aqui." };
+  }
+}
+
+export async function cancelIndicationRequest(slug: string, key: string) {
+  const { condo, supabase } = await requireMember(slug);
+  await supabase.rpc("cancel_indication_request", { p_condo: condo.id, p_key: key });
+  revalidatePath(`/c/${slug}`, "layout");
+}
+
+export async function ackRequestUpdate(slug: string, id: string) {
+  const { supabase } = await requireMember(slug);
+  if (!UUID.test(id)) return;
+  await supabase.rpc("ack_request_update", { p_id: id });
+  revalidatePath(`/c/${slug}`, "layout");
+}
+
+export async function adminDecideRequest(slug: string, id: string, approve: boolean) {
+  const { condo, supabase } = await requireAdmin(slug);
+  if (!UUID.test(id)) return;
+  await supabase.rpc("admin_decide_request", { p_condo: condo.id, p_id: id, p_approve: approve });
+  revalidatePath(`/c/${slug}`, "layout");
+}

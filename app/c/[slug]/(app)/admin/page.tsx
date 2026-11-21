@@ -14,6 +14,7 @@ import {
   adminSetFeedbackStatus,
   adminCreateCategory,
   adminDismissSuggestion,
+  adminDecideRequest,
   adminMoveToCategory,
   adminResolveReport,
   adminSetProviderStatus,
@@ -34,6 +35,8 @@ export default async function AdminModerar({ params }: { params: Promise<{ slug:
   const { slug } = await params;
   const { condo, supabase } = await requireAdmin(slug);
 
+  const { data: pendReq } = await supabase.rpc("admin_pending_requests", { p_condo: condo.id });
+  const pendingRequests = (pendReq ?? []) as { id: string; label: string; flag_reason: string | null }[];
   const { data: autoUntil } = await supabase.rpc("condo_auto_approve", { p_condo: condo.id });
   const [{ data: flagged }, { data: reportsData }] = await Promise.all([
     supabase.from("provider_listing").select("*").eq("condo_id", condo.id).eq("flagged", true).order("created_at", { ascending: false }),
@@ -125,6 +128,22 @@ export default async function AdminModerar({ params }: { params: Promise<{ slug:
         })}
         {claims.length === 0 && <p className="text-sm text-navy/60">Nenhum pedido pendente.</p>}
       </section>
+
+      {pendingRequests.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="font-semibold">🔎 Pedidos de indicação para conferir ({pendingRequests.length})</h2>
+          {pendingRequests.map((r) => (
+            <div key={r.id} className="card space-y-2">
+              <p className="font-extrabold">“{r.label}”</p>
+              {r.flag_reason && <p className="text-sm text-amber-800">{r.flag_reason}</p>}
+              <div className="flex gap-2">
+                <form action={adminDecideRequest.bind(null, slug, r.id, true)}><button className="btn !px-3 !py-2 !text-sm">Liberar</button></form>
+                <form action={adminDecideRequest.bind(null, slug, r.id, false)}><button className="btn-secondary !px-3 !py-2 !text-sm">Ocultar</button></form>
+              </div>
+            </div>
+          ))}
+        </section>
+      )}
 
       <section className="space-y-3">
         <h2 className="font-semibold">💬 Mensagens dos moradores ({fbNew.length} nova(s))</h2>

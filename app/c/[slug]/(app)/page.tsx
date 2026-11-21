@@ -8,6 +8,8 @@ import { ListControls } from "@/components/ListControls";
 import { SearchBox } from "@/components/SearchBox";
 import { AdCard } from "@/components/AdCard";
 import { ReviewPrompt, type ReviewPromptItem } from "@/components/ReviewPrompt";
+import { NeighborsLooking, type OpenRequest, type RequestUpdate } from "@/components/NeighborsLooking";
+import { RequestForm } from "@/components/RequestForm";
 import { InviteButton } from "@/components/InviteButton";
 import { buildInviteMessage } from "@/lib/invite";
 import { SITE_URL } from "@/lib/site";
@@ -71,7 +73,8 @@ export default async function Home({
         {results.length === 0 && (
           <div className="card space-y-3 text-center text-navy/70">
             <p>Ninguém indicado para essa busca ainda. Conhece alguém?{" "}
-              <Link href={`/c/${slug}/novo`} className="font-bold text-brand-700 underline">Indique agora</Link>.</p>
+              <Link href={`/c/${slug}/novo?servico=${encodeURIComponent(q)}`} className="font-bold text-brand-700 underline">Indique agora</Link>.</p>
+            <div className="mx-auto max-w-xs text-left"><RequestForm slug={slug} label={q} /></div>
             <p className="text-sm">Ou escolha uma categoria:</p>
             <div className="flex flex-wrap justify-center gap-2">
               {categories.slice(0, 8).map((c) => (
@@ -114,6 +117,14 @@ export default async function Home({
   // "Como foi?": quem o morador chamou há 1 a 14 dias e ainda não avaliou (ignora a falta da migration 0020)
   const { data: promptData } = await supabase.rpc("review_prompts", { p_condo: condo.id });
   const reviewPrompts = ((promptData ?? []) as ReviewPromptItem[]);
+
+  // "Os vizinhos estão procurando" (ignora a falta da migration 0027)
+  const [{ data: reqData }, { data: updData }] = await Promise.all([
+    supabase.rpc("open_requests", { p_condo: condo.id }),
+    supabase.rpc("my_request_updates", { p_condo: condo.id }),
+  ]);
+  const openRequests = ((reqData ?? []) as OpenRequest[]).map((r) => ({ ...r, n: Number(r.n) }));
+  const requestUpdates = (updData ?? []) as RequestUpdate[];
 
   const { count: ownedCount } = await supabase
     .from("providers").select("id", { count: "exact", head: true })
@@ -166,6 +177,8 @@ export default async function Home({
           ))}
         </div>
       </section>
+
+      <NeighborsLooking slug={slug} requests={openRequests} updates={requestUpdates} />
 
       <section className="card space-y-2 !bg-sky-soft/60">
         <h2 className="font-extrabold">👋 Quanto mais vizinhos, melhor fica</h2>
