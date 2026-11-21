@@ -2,6 +2,8 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
+import { notifyRequestMatches } from "@/lib/notify";
 import { createClient } from "@/lib/supabase/server";
 import { getCondo, getScope, getUser, requireAdmin, requireMember } from "@/lib/condo";
 import { normalizeWhatsapp } from "@/lib/phone";
@@ -131,6 +133,7 @@ export async function createProvider(slug: string, _: FormState, fd: FormData): 
     if (specError) console.error("set_provider_specialties", specError); // o perfil já existe; só ficam sem as especialidades
   }
   revalidatePath(`/c/${slug}`, "layout");
+  after(() => notifyRequestMatches(data.id));   // avisa por e-mail quem pediu esse serviço (não atrasa a resposta)
   redirect(`/c/${slug}/p/${data.id}?novo=${isMe ? "eu" : "1"}`);
 }
 
@@ -814,7 +817,7 @@ export async function requestIndication(slug: string, _: FormState, fd: FormData
   const { condo, supabase } = await requireMember(slug);
   const label = str(fd, "label").replace(/\s+/g, " ");
   if (label.length < 2 || label.length > 60) return { error: "Escreva o serviço em poucas palavras (de 2 a 60 letras)." };
-  const { data, error } = await supabase.rpc("request_indication", { p_condo: condo.id, p_label: label });
+  const { data, error } = await supabase.rpc("request_indication", { p_condo: condo.id, p_label: label, p_notify: fd.get("notify") === "on" });
   if (error) {
     if (error.message?.includes("limite_diario")) return { error: "Você já fez vários pedidos hoje. Tente de novo amanhã." };
     console.error("requestIndication", error.message);
@@ -832,6 +835,12 @@ export async function requestIndication(slug: string, _: FormState, fd: FormData
 export async function cancelIndicationRequest(slug: string, key: string) {
   const { condo, supabase } = await requireMember(slug);
   await supabase.rpc("cancel_indication_request", { p_condo: condo.id, p_key: key });
+  revalidatePath(`/c/${slug}`, "layout");
+}
+
+export async function setRequestNotify(slug: string, key: string, on: boolean) {
+  const { condo, supabase } = await requireMember(slug);
+  await supabase.rpc("set_request_notify", { p_condo: condo.id, p_key: key, p_on: on });
   revalidatePath(`/c/${slug}`, "layout");
 }
 

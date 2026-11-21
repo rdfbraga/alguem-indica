@@ -16,6 +16,12 @@ export function RequestForm({ slug, label, cta = "🙋 Pedir indicação aos viz
           <input id="req-label" name="label" required minLength={2} maxLength={60} className="input !py-2" placeholder="Ex.: Tapeceiro, Eletricista de ar-condicionado…" />
         </div>
       )}
+      {!state?.ok && (
+        <label className="flex items-start gap-2 text-sm text-navy/80">
+          <input type="checkbox" name="notify" defaultChecked className="mt-0.5 h-5 w-5 shrink-0" />
+          <span>🔔 Me avisar por e-mail quando alguém indicar</span>
+        </label>
+      )}
       {state?.error && <p className="rounded-2xl bg-amber-50 p-3 text-sm text-amber-900">{state.error}</p>}
       {state?.ok && <p className="text-sm font-semibold text-green-700">{state.ok}</p>}
       {!state?.ok && <button disabled={pending} className="btn !px-4 !py-2 !text-sm">{pending ? "Enviando…" : cta}</button>}
