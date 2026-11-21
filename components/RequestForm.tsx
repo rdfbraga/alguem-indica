@@ -16,7 +16,8 @@ export function RequestForm({ slug, label, cta = "🙋 Pedir indicação aos viz
           <input id="req-label" name="label" required minLength={2} maxLength={60} className="input !py-2" placeholder="Ex.: Tapeceiro, Eletricista de ar-condicionado…" />
         </div>
       )}
-      {!state?.ok && (
+      {label !== undefined && <input type="hidden" name="notify" value="on" />}
+      {label === undefined && !state?.ok && (
         <label className="flex items-start gap-2 text-sm text-navy/80">
           <input type="checkbox" name="notify" defaultChecked className="mt-0.5 h-5 w-5 shrink-0" />
           <span>🔔 Me avisar por e-mail quando alguém indicar</span>

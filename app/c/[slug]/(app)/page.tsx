@@ -10,6 +10,7 @@ import { AdCard } from "@/components/AdCard";
 import { ReviewPrompt, type ReviewPromptItem } from "@/components/ReviewPrompt";
 import { NeighborsLooking, type OpenRequest, type RequestUpdate } from "@/components/NeighborsLooking";
 import { RequestForm } from "@/components/RequestForm";
+import { after } from "next/server";
 import { InviteButton } from "@/components/InviteButton";
 import { buildInviteMessage } from "@/lib/invite";
 import { SITE_URL } from "@/lib/site";
@@ -64,6 +65,10 @@ export default async function Home({
       const { data } = await supabase.from("provider_listing").select("*").in("id", [...scores.keys()]);
       results = sortProviders(filterKind((data ?? []) as ProviderRow[], kind), order, scores, condo.id);
     }
+    // Busca sem resultado: registra para o bloco "Os vizinhos estão procurando" (só aparece quando 2 pessoas buscam o mesmo)
+    if (results.length === 0 && q.length >= 3) {
+      after(async () => { await supabase.rpc("log_search_miss", { p_condo: condo.id, p_q: q }); });
+    }
     return (
       <div className="space-y-4">
         <SearchBox slug={slug} q={q} suggestions={suggestions} />
@@ -74,7 +79,8 @@ export default async function Home({
           <div className="card space-y-3 text-center text-navy/70">
             <p>Ninguém indicado para essa busca ainda. Conhece alguém?{" "}
               <Link href={`/c/${slug}/novo?servico=${encodeURIComponent(q)}`} className="font-bold text-brand-700 underline">Indique agora</Link>.</p>
-            <div className="mx-auto max-w-xs text-left"><RequestForm slug={slug} label={q} /></div>
+            <p className="text-sm">Anotamos sua busca: se outros vizinhos procurarem o mesmo, aparece em “Os vizinhos estão procurando” para alguém indicar.</p>
+            <div className="mx-auto max-w-xs text-left"><RequestForm slug={slug} label={q} cta="🔔 Quero ser avisado por e-mail" /></div>
             <p className="text-sm">Ou escolha uma categoria:</p>
             <div className="flex flex-wrap justify-center gap-2">
               {categories.slice(0, 8).map((c) => (

@@ -832,6 +832,13 @@ export async function requestIndication(slug: string, _: FormState, fd: FormData
   }
 }
 
+// De uma busca sem resultado já registrada para um pedido explícito com aviso por e-mail.
+export async function requestWithNotify(slug: string, label: string) {
+  const { condo, supabase } = await requireMember(slug);
+  await supabase.rpc("request_indication", { p_condo: condo.id, p_label: label, p_notify: true });
+  revalidatePath(`/c/${slug}`, "layout");
+}
+
 export async function cancelIndicationRequest(slug: string, key: string) {
   const { condo, supabase } = await requireMember(slug);
   await supabase.rpc("cancel_indication_request", { p_condo: condo.id, p_key: key });

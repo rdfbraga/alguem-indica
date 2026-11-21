@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { ackRequestUpdate, cancelIndicationRequest, setRequestNotify } from "@/app/c/[slug]/actions";
+import { ackRequestUpdate, cancelIndicationRequest, requestWithNotify, setRequestNotify } from "@/app/c/[slug]/actions";
 import { RequestForm } from "./RequestForm";
 
-export type OpenRequest = { group_key: string; label: string; category_slug: string | null; n: number; i_asked: boolean; i_notify?: boolean };
+export type OpenRequest = { group_key: string; label: string; category_slug: string | null; n: number; i_asked: boolean; i_notify?: boolean; i_searched?: boolean };
 export type RequestUpdate = { id: string; label: string; category_slug: string | null };
 
 const TOP = 4;
@@ -18,11 +18,16 @@ export function NeighborsLooking({ slug, requests, updates }: { slug: string; re
       <div className="min-w-0">
         <div className="truncate font-extrabold">{r.label}</div>
         <div className="text-xs text-navy/60">
-          {r.n} {r.n === 1 ? "vizinho pediu" : "vizinhos pediram"}{r.i_asked ? " · inclusive você" : ""}
+          {r.n} {r.n === 1 ? "vizinho procura" : "vizinhos procuram"}{r.i_asked || r.i_searched ? " · inclusive você" : ""}
         </div>
       </div>
       <div className="flex shrink-0 flex-col items-end gap-1">
         <Link href={href(r)} className="btn !px-3 !py-1.5 !text-xs">Eu conheço alguém</Link>
+        {!r.i_asked && r.i_searched && (
+          <form action={requestWithNotify.bind(null, slug, r.label)}>
+            <button className="text-[11px] font-semibold text-sky-brand underline">🔔 Avisar por e-mail</button>
+          </form>
+        )}
         {r.i_asked && (
           <>
             <form action={setRequestNotify.bind(null, slug, r.label, !r.i_notify)}>
