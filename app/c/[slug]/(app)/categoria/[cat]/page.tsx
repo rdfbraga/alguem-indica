@@ -40,6 +40,8 @@ export default async function Categoria({
   const c = category as Category;
   // Filtro por especialidade (só as que têm prestadores neste condomínio).
   const { data: specData } = await supabase.from("specialties").select("id,category_id,slug,name").eq("category_id", c.id);
+  // Categoria sem nenhum prestador na região: conta como "procura sem oferta" (aparece em "Os vizinhos estão procurando").
+  if (all.length === 0) await supabase.rpc("log_search_miss", { p_condo: condo.id, p_q: c.name.split(" / ")[0] });
   const specOptions = specialtyCounts(all, (specData ?? []) as Specialty[]);
   const esp = parseSpecialtyFilter(sp.esp, specOptions);
   const providers = sortProviders(filterBySpecialty(filterKind(all, kind), esp), order, undefined, condo.id);

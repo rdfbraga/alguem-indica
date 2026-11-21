@@ -10,7 +10,6 @@ import { AdCard } from "@/components/AdCard";
 import { ReviewPrompt, type ReviewPromptItem } from "@/components/ReviewPrompt";
 import { NeighborsLooking, type OpenRequest, type RequestUpdate } from "@/components/NeighborsLooking";
 import { RequestForm } from "@/components/RequestForm";
-import { after } from "next/server";
 import { InviteButton } from "@/components/InviteButton";
 import { buildInviteMessage } from "@/lib/invite";
 import { SITE_URL } from "@/lib/site";
@@ -67,7 +66,7 @@ export default async function Home({
     }
     // Busca sem resultado: registra para o bloco "Os vizinhos estão procurando" (só aparece quando 2 pessoas buscam o mesmo)
     if (results.length === 0 && q.length >= 3) {
-      after(async () => { await supabase.rpc("log_search_miss", { p_condo: condo.id, p_q: q }); });
+      await supabase.rpc("log_search_miss", { p_condo: condo.id, p_q: q });   // na hora: o app nunca depende do que roda depois da resposta
     }
     return (
       <div className="space-y-4">
