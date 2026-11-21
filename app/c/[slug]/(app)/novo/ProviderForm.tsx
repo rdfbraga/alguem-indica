@@ -74,10 +74,10 @@ export function ProviderForm({
       </div>
       <SpecialtyPicker specialties={specialties} categories={allCategories} categoryIds={categoryIds} value={specialtyIds} onChange={setSpecialtyIds} />
       {isOther && (
-        <div>
-          <label className="label" htmlFor="custom_category">Qual categoria?</label>
-          <input id="custom_category" name="custom_category" required minLength={2} maxLength={40} className="input" placeholder="Ex.: Dedetização, Fotógrafo, Costureira…" />
-          <p className="mt-1 text-xs text-navy/60">A indicação já fica publicada em “Outros”. Se várias pessoas pedirem, a administração pode criar uma categoria própria.</p>
+        <div className="space-y-1 rounded-2xl border-2 border-brand-500/50 bg-brand-50/60 p-3">
+          <label className="label" htmlFor="custom_category">✍️ Qual é o tipo de serviço? (sugestão de categoria nova)</label>
+          <input id="custom_category" name="custom_category" required minLength={2} maxLength={40} autoFocus className="input" placeholder="Ex.: Costureira, Fotógrafo, Tapeceiro…" />
+          <p className="text-xs text-navy/70">Pronto, é só isso. A indicação já fica publicada e a administração analisa: se fizer sentido, cria a categoria e move o perfil para ela. Se a categoria já existir com outro nome, ela também ajusta para você.</p>
         </div>
       )}
       {!self && (<>

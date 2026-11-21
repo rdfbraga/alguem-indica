@@ -20,6 +20,13 @@ export function CategoryPicker({
   const byId = new Map(all.map((c) => [c.id, c]));
   const full = value.length >= max;
   const [groupId, setGroupId] = useState<number | "">("");
+  const other = byId.size ? all.find((c) => c.slug === "outros") : undefined;   // "Outros": é por onde se sugere uma categoria nova
+  const nameOf = (c: Category) => (c.slug === "outros" ? "Outra categoria (sugerir)" : c.name);
+  const suggest = () => {
+    if (!other || value.includes(other.id) || full) return;
+    onChange([...value, other.id]);
+    setGroupId("");
+  };
   const section = sections.find((s) => s.group.id === groupId);
   const options = section ? section.categories.filter((c) => !value.includes(c.id)) : [];
 
@@ -32,7 +39,7 @@ export function CategoryPicker({
           <div key={id} className="flex items-center gap-2 rounded-2xl border-2 border-brand-100 bg-brand-50 px-3 py-2">
             <input type="hidden" name="category_id" value={id} />
             <span className="flex-1 text-sm font-bold">
-              {c.icon} {c.name}
+              {c.icon} {nameOf(c)}
               {i === 0 && <span className="ml-2 rounded-full bg-brand-500 px-2 py-0.5 text-[10px] font-bold uppercase text-white">principal</span>}
             </span>
             {i > 0 && (
@@ -40,7 +47,7 @@ export function CategoryPicker({
                 tornar principal
               </button>
             )}
-            <button type="button" onClick={() => onChange(value.filter((x) => x !== id))} aria-label={`Remover ${c.name}`} className="px-1 text-lg leading-none text-navy/50 hover:text-navy">
+            <button type="button" onClick={() => onChange(value.filter((x) => x !== id))} aria-label={`Remover ${nameOf(c)}`} className="px-1 text-lg leading-none text-navy/50 hover:text-navy">
               ×
             </button>
           </div>
@@ -72,8 +79,14 @@ export function CategoryPicker({
               autoFocus
             >
               <option value="">2. Escolha a categoria…</option>
-              {options.map((c) => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
+              {options.map((c) => <option key={c.id} value={c.id}>{c.icon} {nameOf(c)}</option>)}
             </select>
+          )}
+          {other && !value.includes(other.id) && (
+            <button type="button" onClick={suggest} className="w-full rounded-2xl border-2 border-dashed border-brand-500/60 bg-brand-50/60 p-3 text-left text-sm transition hover:bg-brand-50">
+              <b className="text-brand-700">🔎 Não achou a categoria? Sugira uma nova</b>
+              <span className="mt-0.5 block text-navy/70">Escreva qual é o serviço. O perfil já entra no ar e a administração cria a categoria se fizer sentido.</span>
+            </button>
           )}
         </div>
       )}

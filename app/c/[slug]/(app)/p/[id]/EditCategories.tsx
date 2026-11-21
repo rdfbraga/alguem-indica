@@ -40,7 +40,7 @@ export function EditCategories({
       <SpecialtyPicker specialties={specialties} categories={sections.flatMap((s) => s.categories)} categoryIds={ids} value={specialtyIds} onChange={setSpecialtyIds} customDefault={initialCustomSpecialty} />
       {hasOther && (
         <div>
-          <label className="label" htmlFor="custom_category">Qual serviço em “Outros”?</label>
+          <label className="label" htmlFor="custom_category">Qual é o tipo de serviço? (sugestão de categoria nova)</label>
           <input id="custom_category" name="custom_category" defaultValue={initialCustom} required minLength={2} maxLength={40} className="input" placeholder="Ex.: Costureira" />
         </div>
       )}
