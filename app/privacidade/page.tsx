@@ -14,7 +14,7 @@ export default function Privacidade() {
       <h2 className="text-lg font-semibold">Para que usamos</h2>
       <p>Para autenticar você, mostrar indicações aos vizinhos do mesmo condomínio, evitar avaliações falsas e moderar conteúdo. Não vendemos seus dados.</p>
       <h2 className="text-lg font-semibold">O que os vizinhos veem</h2>
-      <p>Os relatórios mostram apenas totais (ex.: “12 pessoas viram seu perfil”); o prestador nunca vê quem foi. Em avaliações aparecem apenas seu primeiro nome, a inicial do sobrenome e o bloco (ex.: “Maria S. · Bloco B”). Seu e-mail e sua unidade não são exibidos. Os dados de prestadores (nome, WhatsApp, descrição) ficam visíveis apenas a moradores cadastrados no mesmo condomínio.</p>
+      <p>Os relatórios mostram apenas totais (ex.: “12 pessoas viram seu perfil”); o prestador nunca vê quem foi. Em avaliações aparecem apenas seu primeiro nome, a inicial do sobrenome e o bloco (ex.: “Maria S. · Bloco B”) ou, em condomínios de casas, a rua (ex.: “Maria S. · Rua das Acácias”). Seu e-mail e sua unidade não são exibidos. Os dados de prestadores (nome, WhatsApp, descrição) ficam visíveis apenas a moradores cadastrados no mesmo condomínio.</p>
       <h2 className="text-lg font-semibold">Seus direitos</h2>
       <p>Você pode solicitar acesso, correção ou exclusão dos seus dados, e prestadores podem pedir a remoção do seu perfil, entrando em contato com a administração do Alguém Indica.</p>
       <h2 className="text-lg font-semibold">Terceiros</h2>

@@ -1,4 +1,4 @@
-export type Condo = { id: string; slug: string; name: string };
+export type Condo = { id: string; slug: string; name: string; kind?: "building" | "houses" };
 export type Member = {
   user_id: string;
   condo_id: string;

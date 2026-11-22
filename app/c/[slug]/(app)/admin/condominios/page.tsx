@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireAdmin } from "@/lib/condo";
 import { StatTile } from "@/components/StatTile";
 import { naturalCompare } from "@/lib/natural";
+import { KIND_LABEL, parseCondoKind } from "@/lib/condo-kind";
 import { platformDeleteRegion, platformSetAdmin } from "../../../actions";
 import { AddAdminByEmailForm, AutoApproveForm, EditCondoForm, NewCondoForm, RegionForm } from "./PlatformForms";
 
@@ -10,13 +11,13 @@ export const metadata = { title: "Condomínios — Admin" };
 type Row = {
   condo_id: string; slug: string; name: string; region_name: string | null;
   members: number; members_new: number; providers: number; reviews_new: number; whatsapp_30d: number; active_7d: number;
-  pend_feedback: number; pend_claims: number; pend_flagged: number; pend_reports: number; pend_categories: number; pend_specialties: number;
+  pend_feedback: number; pend_claims: number; pend_flagged: number; pend_reports: number; pend_categories: number; pend_specialties: number; kind?: string;
 };
 
 const n = (v: number) => Number(v) || 0;
 const pending = (r: Row) => n(r.pend_feedback) + n(r.pend_claims) + n(r.pend_flagged) + n(r.pend_reports) + n(r.pend_categories) + n(r.pend_specialties);
 
-type PCondo = { auto_approve_until?: string | null; id: string; slug: string; name: string; is_active: boolean; region_id: string | null; region_name: string | null; members: number; providers: number; admins: number };
+type PCondo = { kind?: string; auto_approve_until?: string | null; id: string; slug: string; name: string; is_active: boolean; region_id: string | null; region_name: string | null; members: number; providers: number; admins: number };
 type Person = { user_id: string; full_name: string; block: string; unit: string; email: string };
 type PRegion = { id: string; slug: string; name: string; condos: number };
 
@@ -25,10 +26,11 @@ export default async function AdminCondominios({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ erro?: string; adm?: string; aq?: string }>;
+  searchParams: Promise<{ erro?: string; adm?: string; aq?: string; tipo?: string }>;
 }) {
   const { slug } = await params;
-  const { erro, adm, aq } = await searchParams;
+  const { erro, adm, aq, tipo } = await searchParams;
+  const tipoFiltro = tipo === "houses" || tipo === "building" ? tipo : null;
   const { supabase } = await requireAdmin(slug);
   const { data, error } = await supabase.rpc("admin_overview");
   // Administrador da plataforma: cria condomínios e regiões (se a migration 0024 ainda não rodou, o bloco não aparece).
@@ -50,7 +52,7 @@ export default async function AdminCondominios({
       found = (f ?? []) as Person[];
     }
   }
-  const rows = ((data ?? []) as Row[]).sort((a, b) => pending(b) - pending(a) || naturalCompare(a.name, b.name));
+  const rows = ((data ?? []) as Row[]).filter((r) => !tipoFiltro || parseCondoKind(r.kind) === tipoFiltro).sort((a, b) => pending(b) - pending(a) || naturalCompare(a.name, b.name));
 
   if (error) {
     return (
@@ -123,11 +125,11 @@ export default async function AdminCondominios({
               <details key={c.id} className="card !p-3" open={adm === c.id}>
                 <summary className="flex cursor-pointer items-center justify-between gap-2">
                   <span className="min-w-0 truncate font-bold">{c.name}{!c.is_active && <span className="ml-1.5 rounded-full bg-red-50 px-1.5 py-0.5 align-middle text-[10px] font-bold text-red-700">INATIVO</span>}</span>
-                  <span className="shrink-0 text-xs text-navy/55">{Number(c.members)} moradores · {c.region_name ?? "sem região"}</span>
+                  <span className="shrink-0 text-xs text-navy/55">{KIND_LABEL[parseCondoKind(c.kind)]} · {Number(c.members)} moradores · {c.region_name ?? "sem região"}</span>
                 </summary>
                 <div className="mt-3 space-y-3 rounded-2xl bg-sky-soft p-3">
                   <p className="text-xs text-navy/60">Link: /c/{c.slug} · {Number(c.providers)} prestadores · {Number(c.admins)} {Number(c.admins) === 1 ? "administrador" : "administradores"}</p>
-                  <EditCondoForm slug={slug} condo={{ id: c.id, name: c.name, region_id: c.region_id, is_active: c.is_active }} regions={pRegions.map((r) => ({ id: r.id, name: r.name }))} />
+                  <EditCondoForm slug={slug} condo={{ id: c.id, name: c.name, region_id: c.region_id, is_active: c.is_active, kind: parseCondoKind(c.kind) }} regions={pRegions.map((r) => ({ id: r.id, name: r.name }))} />
 
                   <div className="border-t border-navy/10 pt-3">
                     <AutoApproveForm slug={slug} condoId={c.id} until={c.auto_approve_until ?? null} />
@@ -178,6 +180,13 @@ export default async function AdminCondominios({
 
       <section className="space-y-3">
         <h2 className="font-semibold">🏘️ Todos os seus condomínios ({rows.length})</h2>
+        <div className="flex flex-wrap gap-2 text-sm" aria-label="Filtrar por tipo">
+          {([["", "Todos"], ["building", KIND_LABEL.building], ["houses", KIND_LABEL.houses]] as const).map(([v, label]) => (
+            <Link key={v} href={v ? `/c/${slug}/admin/condominios?tipo=${v}` : `/c/${slug}/admin/condominios`} replace scroll={false}
+              aria-current={(tipoFiltro ?? "") === v ? "true" : undefined}
+              className={`rounded-full border-2 px-3 py-1 font-bold ${(tipoFiltro ?? "") === v ? "border-brand-500 bg-brand-500 text-white" : "border-navy/15 bg-white text-navy"}`}>{label}</Link>
+          ))}
+        </div>
         <div className="grid grid-cols-2 gap-3">
           <StatTile label="Moradores cadastrados" value={sum((r) => n(r.members))} hint={`+${sum((r) => n(r.members_new))} nos últimos 30 dias`} />
           <StatTile label="Prestadores ativos" value={sum((r) => n(r.providers))} />
@@ -195,7 +204,7 @@ export default async function AdminCondominios({
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <div className="text-lg font-extrabold">{r.name}{r.condo_id && r.slug === slug ? <span className="ml-2 rounded-full bg-sky-soft px-2 py-0.5 align-middle text-[10px] font-bold uppercase text-sky-brand">você está aqui</span> : null}</div>
-                  <div className="text-xs text-navy/55">{r.region_name ? `Região: ${r.region_name}` : "Sem região"} · /c/{r.slug}</div>
+                  <div className="text-xs text-navy/55">{KIND_LABEL[parseCondoKind(r.kind)]} · {r.region_name ? `Região: ${r.region_name}` : "Sem região"} · /c/{r.slug}</div>
                 </div>
                 {p > 0 && <span className="shrink-0 rounded-full bg-brand-500 px-2 py-0.5 text-xs font-bold text-white">{p}</span>}
               </div>

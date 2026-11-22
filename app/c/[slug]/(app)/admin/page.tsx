@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getScope, requireAdmin } from "@/lib/condo";
+import { blockText, parseCondoKind, placeText } from "@/lib/condo-kind";
 import type { Category, CategoryGroup, FeedbackRow, ProfileClaimRow, ProviderRow, ReviewRow } from "@/lib/types";
 import { FlaggedList } from "./FlaggedList";
 import { formatWhatsapp } from "@/lib/phone";
@@ -70,7 +71,7 @@ export default async function AdminModerar({ params }: { params: Promise<{ slug:
     : [];
   const authorOf = (uid: string) => {
     const m = fbAuthors.find((a) => a.user_id === uid);
-    return m ? `${m.full_name} · Bloco ${m.block}, ${m.unit}` : "Morador";
+    return m ? `${m.full_name} · ${placeText(parseCondoKind(condo.kind), m.block, m.unit)}` : "Morador";
   };
   const { data: claimData } = await supabase
     .from("profile_claims").select("*").eq("condo_id", condo.id).eq("status", "pending").order("created_at", { ascending: true });
@@ -112,12 +113,12 @@ export default async function AdminModerar({ params }: { params: Promise<{ slug:
           return (
             <div key={c.id} className="card space-y-3">
               <p>
-                <b>{who ? `${who.full_name} · Bloco ${who.block}, ${who.unit}` : "Morador"}</b> quer assumir o perfil{" "}
+                <b>{who ? `${who.full_name} · ${placeText(parseCondoKind(condo.kind), who.block, who.unit)}` : "Morador"}</b> quer assumir o perfil{" "}
                 <Link className="font-bold underline" href={`/c/${slug}/p/${c.provider_id}`}>{prov?.name ?? "—"}</Link>
               </p>
               {prov && (
                 <p className="text-sm text-navy/70">
-                  WhatsApp do perfil: <b>{formatWhatsapp(prov.whatsapp)}</b> · {prov.kind === "resident" ? `Morador${prov.block ? ` (Bloco ${prov.block})` : ""}` : "Externo"}.
+                  WhatsApp do perfil: <b>{formatWhatsapp(prov.whatsapp)}</b> · {prov.kind === "resident" ? `Morador${prov.block ? ` (${blockText(parseCondoKind(condo.kind), prov.block)})` : ""}` : "Externo"}.
                   Confirme que é a mesma pessoa (por exemplo, chamando nesse número) antes de aprovar.
                 </p>
               )}

@@ -14,6 +14,7 @@ import { MAX_CATEGORIES, parseCategoryIds } from "@/lib/categories";
 import { FEATURES } from "@/lib/features";
 import { condoNext } from "@/lib/next-path";
 import { MAX_SPECIALTIES } from "@/lib/specialties";
+import { parseCondoKind, placeLabels } from "@/lib/condo-kind";
 
 const str = (fd: FormData, k: string) => String(fd.get(k) ?? "").trim();
 
@@ -22,10 +23,10 @@ export async function completeOnboarding(slug: string, _: FormState, fd: FormDat
   const user = await getUser();
   if (!user) redirect(`/c/${slug}/entrar`);
   const full_name = str(fd, "full_name");
-  const block = str(fd, "block");
-  const unit = str(fd, "unit");
+  const block = str(fd, "block").slice(0, 60);
+  const unit = str(fd, "unit").slice(0, 20);
   if (full_name.length < 2) return { error: "Informe seu nome completo." };
-  if (!block || !unit) return { error: "Informe bloco/torre e unidade." };
+  if (!block || !unit) return { error: placeLabels(parseCondoKind(condo.kind)).missing };
   if (fd.get("terms") !== "on") return { error: "É preciso aceitar os termos para continuar." };
   const supabase = await createClient();
   const { error } = await supabase
@@ -719,7 +720,7 @@ const uuidOrNull = (v: FormDataEntryValue | null) => (typeof v === "string" && U
 export async function platformCreateCondo(slug: string, _: FormState, fd: FormData): Promise<FormState> {
   const { supabase } = await requireAdmin(slug);
   const newSlug = str(fd, "slug").toLowerCase();
-  const { error } = await supabase.rpc("platform_create_condo", { p_slug: newSlug, p_name: str(fd, "name"), p_region: uuidOrNull(fd.get("region_id")) });
+  const { error } = await supabase.rpc("platform_create_condo", { p_slug: newSlug, p_name: str(fd, "name"), p_region: uuidOrNull(fd.get("region_id")), p_kind: parseCondoKind(str(fd, "kind")) });
   if (error) {
     console.error("platformCreateCondo", error.message);
     return { error: platformError(error.message, "Não foi possível criar o condomínio.") };
@@ -732,7 +733,7 @@ export async function platformUpdateCondo(slug: string, condoId: string, _: Form
   const { supabase } = await requireAdmin(slug);
   const region = uuidOrNull(fd.get("region_id"));
   const { error } = await supabase.rpc("platform_update_condo", {
-    p_condo: condoId, p_name: str(fd, "name"), p_region: region, p_active: fd.get("active") === "on",
+    p_condo: condoId, p_name: str(fd, "name"), p_region: region, p_active: fd.get("active") === "on", p_kind: parseCondoKind(str(fd, "kind")),
   });
   if (error) {
     if (error.message?.includes("whatsapp_conflict") && region) {

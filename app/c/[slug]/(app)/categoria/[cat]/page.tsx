@@ -4,6 +4,7 @@ import { getFeatures, getScope, requireMember } from "@/lib/condo";
 import type { Category, ProviderRow } from "@/lib/types";
 import { filterKind, parseKind, parseOrder, sortProviders } from "@/lib/listing";
 import { ProviderCard } from "@/components/ProviderCard";
+import { parseCondoKind } from "@/lib/condo-kind";
 import { ListControls } from "@/components/ListControls";
 import { SpecialtyChips } from "@/components/SpecialtyChips";
 import { filterBySpecialty, parseSpecialtyFilter, specialtyCounts, type Specialty } from "@/lib/specialties";
@@ -56,7 +57,7 @@ export default async function Categoria({
       {all.length > 1 && (
         <ListControls base={`/c/${slug}/categoria/${cat}`} order={order} kind={kind} orders={["melhores", "avaliados", "recentes"]} extra={{ esp }} />
       )}
-      {providers.map((p) => <ProviderCard key={p.id} slug={slug} p={p} planBadge={flags.plans} viewerCondoId={condo.id} />)}
+      {providers.map((p) => <ProviderCard key={p.id} slug={slug} p={p} planBadge={flags.plans} viewerCondoId={condo.id} kind={parseCondoKind(condo.kind)} />)}
       {providers.length === 0 && all.length > 0 && (
         <p className="card text-center text-navy/70">Ninguém neste filtro. Tente ver “Todos”.</p>
       )}

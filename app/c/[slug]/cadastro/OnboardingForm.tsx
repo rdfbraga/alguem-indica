@@ -2,8 +2,10 @@
 import { useActionState } from "react";
 import { completeOnboarding } from "../actions";
 import type { FormState } from "@/lib/types";
+import { placeLabels, type CondoKind } from "@/lib/condo-kind";
 
-export function OnboardingForm({ slug, defaultName, next }: { slug: string; defaultName: string; next: string }) {
+export function OnboardingForm({ slug, defaultName, next, kind = "building" }: { slug: string; defaultName: string; next: string; kind?: CondoKind }) {
+  const L = placeLabels(kind);
   const [state, action, pending] = useActionState<FormState, FormData>(completeOnboarding.bind(null, slug), undefined);
   return (
     <form action={action} className="space-y-4">
@@ -14,16 +16,16 @@ export function OnboardingForm({ slug, defaultName, next }: { slug: string; defa
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="label" htmlFor="block">Bloco / Torre</label>
-          <input id="block" name="block" required maxLength={20} className="input" placeholder="B" />
+          <label className="label" htmlFor="block">{L.primary}</label>
+          <input id="block" name="block" required maxLength={60} className="input" placeholder={L.primaryPlaceholder} />
         </div>
         <div>
-          <label className="label" htmlFor="unit">Unidade</label>
-          <input id="unit" name="unit" required maxLength={20} className="input" placeholder="204" />
+          <label className="label" htmlFor="unit">{L.secondary}</label>
+          <input id="unit" name="unit" required maxLength={20} className="input" placeholder={L.secondaryPlaceholder} />
         </div>
       </div>
       <p className="text-xs text-navy/60">
-        Seu nome e unidade <b>não</b> ficam públicos. Nas avaliações aparece só seu primeiro nome, a inicial do sobrenome e o bloco.
+        {kind === "houses" ? <>Seu nome e o número da casa <b>não</b> ficam públicos. Nas avaliações aparece só seu primeiro nome, a inicial do sobrenome e a rua.</> : <>Seu nome e unidade <b>não</b> ficam públicos. Nas avaliações aparece só seu primeiro nome, a inicial do sobrenome e o bloco.</>}
       </p>
       <label className="flex items-start gap-2 rounded-2xl bg-sky-soft p-3 text-sm">
         <input type="checkbox" name="offers_service" className="mt-1 h-4 w-4" />

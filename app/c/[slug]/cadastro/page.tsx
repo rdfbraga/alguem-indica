@@ -3,6 +3,7 @@ import { getCondo, getUser } from "@/lib/condo";
 import { createClient } from "@/lib/supabase/server";
 import { OnboardingForm } from "./OnboardingForm";
 import { condoNext, withNext } from "@/lib/next-path";
+import { parseCondoKind } from "@/lib/condo-kind";
 
 export default async function Cadastro({
   params,
@@ -27,7 +28,7 @@ export default async function Cadastro({
         <h1 className="text-2xl font-bold">Quase lá! 👋</h1>
         <p className="muted">Complete seu cadastro em <b>{condo.name}</b>.</p>
       </header>
-      <OnboardingForm slug={slug} defaultName={defaultName} next={next} />
+      <OnboardingForm slug={slug} defaultName={defaultName} next={next} kind={parseCondoKind(condo.kind)} />
     </main>
   );
 }

@@ -7,6 +7,7 @@ import { CategoryPicker } from "@/components/CategoryPicker";
 import { PhotoField } from "@/components/PhotoField";
 import { SpecialtyPicker } from "@/components/SpecialtyPicker";
 import type { Specialty } from "@/lib/specialties";
+import { placeLabels, type CondoKind } from "@/lib/condo-kind";
 
 export function ProviderForm({
   slug,
@@ -18,6 +19,7 @@ export function ProviderForm({
   specialties,
   initialCategoryIds = [],
   initialCustom = "",
+  condoKind = "building",
 }: {
   slug: string;
   sections: Section<GroupLike, Category>[];
@@ -28,7 +30,9 @@ export function ProviderForm({
   specialties: Specialty[];
   initialCategoryIds?: number[];
   initialCustom?: string;
+  condoKind?: CondoKind;
 }) {
+  const L = placeLabels(condoKind);
   const [state, action, pending] = useActionState<FormState, FormData>(createProvider.bind(null, slug), undefined);
   const [mode, setMode] = useState<"self" | "other">(initialMode);
   const self = mode === "self";
@@ -98,8 +102,8 @@ export function ProviderForm({
       </div>
       {kind === "resident" && (
         <div>
-          <label className="label" htmlFor="block">Bloco / Torre do profissional</label>
-          <input id="block" name="block" defaultValue={defaultBlock} maxLength={20} className="input" />
+          <label className="label" htmlFor="block">{L.providerPrimary}</label>
+          <input id="block" name="block" defaultValue={defaultBlock} maxLength={60} className="input" />
         </div>
       )}
       </>)}

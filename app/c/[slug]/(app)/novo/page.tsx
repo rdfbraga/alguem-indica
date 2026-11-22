@@ -4,6 +4,7 @@ import type { Category, CategoryGroup } from "@/lib/types";
 import { groupCategories } from "@/lib/groups";
 import type { Specialty } from "@/lib/specialties";
 import { ProviderForm } from "./ProviderForm";
+import { parseCondoKind } from "@/lib/condo-kind";
 
 export default async function Novo({
   params,
@@ -14,7 +15,7 @@ export default async function Novo({
 }) {
   const { slug } = await params;
   const sp = await searchParams;
-  const { user, member, supabase } = await requireMember(slug);
+  const { condo, user, member, supabase } = await requireMember(slug);
   const [{ data }, { data: groupData }] = await Promise.all([
     supabase.from("categories").select("*").order("sort"),
     supabase.from("category_groups").select("id,slug,name,icon").order("sort"),
@@ -33,7 +34,7 @@ export default async function Novo({
     <div className="space-y-4">
       <Link href={`/c/${slug}`} className="text-sm text-navy/60">← Voltar</Link>
       <h1 className="text-xl font-bold">Cadastrar um prestador</h1>
-      <ProviderForm slug={slug} sections={sections} userId={user.id} defaultBlock={member.block} defaultName={member.full_name} initialMode={sp.eu ? "self" : "other"} specialties={specialties} initialCategoryIds={initialCategoryIds} initialCustom={initialCustom} />
+      <ProviderForm slug={slug} sections={sections} userId={user.id} defaultBlock={member.block} defaultName={member.full_name} initialMode={sp.eu ? "self" : "other"} specialties={specialties} initialCategoryIds={initialCategoryIds} initialCustom={initialCustom} condoKind={parseCondoKind(condo.kind)} />
     </div>
   );
 }

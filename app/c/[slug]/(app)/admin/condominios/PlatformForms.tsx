@@ -2,6 +2,7 @@
 import { useActionState } from "react";
 import { platformAddAdminByEmail, platformCreateCondo, platformSaveRegion, platformSetAutoApprove, platformUpdateCondo } from "../../../actions";
 import type { FormState } from "@/lib/types";
+import { KIND_LABEL, type CondoKind } from "@/lib/condo-kind";
 
 export type RegionOpt = { id: string; name: string };
 
@@ -23,6 +24,19 @@ function RegionSelect({ id, regions, value }: { id: string; regions: RegionOpt[]
   );
 }
 
+function KindSelect({ id, value }: { id: string; value?: CondoKind }) {
+  return (
+    <div>
+      <label className="label !text-xs" htmlFor={id}>Tipo do condomínio</label>
+      <select id={id} name="kind" defaultValue={value ?? "building"} className="input !py-2">
+        <option value="building">{KIND_LABEL.building} (bloco e apartamento)</option>
+        <option value="houses">{KIND_LABEL.houses} (rua e número da casa)</option>
+      </select>
+      <p className="mt-1 text-xs text-navy/55">Muda o cadastro dos moradores (bloco/unidade ou rua/número) e o que aparece nas avaliações.</p>
+    </div>
+  );
+}
+
 export function NewCondoForm({ slug, regions }: { slug: string; regions: RegionOpt[] }) {
   const [state, action, pending] = useActionState<FormState, FormData>(platformCreateCondo.bind(null, slug), undefined);
   return (
@@ -38,6 +52,7 @@ export function NewCondoForm({ slug, regions }: { slug: string; regions: RegionO
         </div>
         <p className="mt-1 text-xs text-navy/55">Letras minúsculas, números e hífen. Não muda depois: é o link que os moradores guardam.</p>
       </div>
+      <KindSelect id="nc-kind" />
       <div>
         <label className="label !text-xs" htmlFor="nc-region">Região</label>
         <RegionSelect id="nc-region" regions={regions} />
@@ -52,7 +67,7 @@ export function EditCondoForm({
   slug, condo, regions,
 }: {
   slug: string;
-  condo: { id: string; name: string; region_id: string | null; is_active: boolean };
+  condo: { id: string; name: string; region_id: string | null; is_active: boolean; kind: CondoKind };
   regions: RegionOpt[];
 }) {
   const [state, action, pending] = useActionState<FormState, FormData>(platformUpdateCondo.bind(null, slug, condo.id), undefined);
@@ -63,6 +78,7 @@ export function EditCondoForm({
         <label className="label !text-xs" htmlFor={`${k}-name`}>Nome</label>
         <input id={`${k}-name`} name="name" required minLength={2} maxLength={80} defaultValue={condo.name} className="input !py-2" />
       </div>
+      <KindSelect id={`${k}-kind`} value={condo.kind} />
       <div>
         <label className="label !text-xs" htmlFor={`${k}-region`}>Região</label>
         <RegionSelect id={`${k}-region`} regions={regions} value={condo.region_id} />

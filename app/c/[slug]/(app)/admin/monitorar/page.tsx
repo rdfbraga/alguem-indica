@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getFeatures, requireAdmin } from "@/lib/condo";
 import { StatTile } from "@/components/StatTile";
 import { BarChart } from "@/components/BarChart";
+import { blockText, parseCondoKind, placeLabels } from "@/lib/condo-kind";
 import { PERIODS, delta, parsePeriod } from "@/lib/stats";
 import type { AdRow } from "@/lib/types";
 
@@ -52,6 +53,7 @@ export default async function AdminMonitorar({
   const days = parsePeriod(sp.dias);
   const { condo, supabase } = await requireAdmin(slug);
   const flags = await getFeatures(condo.id);
+  const kind = parseCondoKind(condo.kind);
 
   const [{ data: gs }, { data: cs }] = await Promise.all([
     supabase.rpc("growth_stats", { p_condo: condo.id, p_days: days }),
@@ -153,11 +155,11 @@ export default async function AdminMonitorar({
               )}
             </div>
             <div className="card !p-3 text-sm">
-              <div className="mb-2 font-bold">Moradores cadastrados por bloco</div>
+              <div className="mb-2 font-bold">{placeLabels(kind).groupTitle}</div>
               {g.blocks.length === 0 ? <p className="text-navy/60">Sem moradores.</p> : (
                 <ul className="grid grid-cols-2 gap-x-4 gap-y-1">
                   {g.blocks.map((b) => (
-                    <li key={b.block} className="flex justify-between gap-2"><span>Bloco {b.block}</span><span className="tabular-nums text-navy/70">{b.n}</span></li>
+                    <li key={b.block} className="flex justify-between gap-2"><span>{blockText(kind, b.block)}</span><span className="tabular-nums text-navy/70">{b.n}</span></li>
                   ))}
                 </ul>
               )}

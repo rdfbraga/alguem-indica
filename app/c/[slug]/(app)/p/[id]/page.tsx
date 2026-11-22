@@ -4,6 +4,7 @@ import { getFeatures, getRegionInfo, getScope, requireMember } from "@/lib/condo
 import { formatWhatsapp } from "@/lib/phone";
 import { instagramUrl, websiteLabel } from "@/lib/links";
 import { reviewAuthorLabel } from "@/lib/regions";
+import { blockText, parseCondoKind } from "@/lib/condo-kind";
 import { InviteChoices } from "@/components/InviteChoices";
 import { ViewTracker } from "@/components/ViewTracker";
 import type { ProviderStats } from "@/lib/stats";
@@ -215,7 +216,7 @@ export default async function Prestador({
             )}
             {foreign && <div className="text-xs font-semibold text-sky-brand">📍 Indicado em {p.condo_name ?? "um condomínio vizinho"}</div>}
             <div className="text-sm text-navy/60">
-              {providerCategoryLabels(p).join(" · ")} · {p.kind === "resident" ? `Morador${p.block && !foreign ? ` (Bloco ${p.block})` : ""}` : "Externo indicado por morador"}
+              {providerCategoryLabels(p).join(" · ")} · {p.kind === "resident" ? `Morador${p.block && !foreign ? ` (${blockText(parseCondoKind(condo.kind), p.block)})` : ""}` : "Externo indicado por morador"}
             </div>
             {providerSpecialtyLabels(p).length > 0 && (
               <div className="mt-1 flex flex-wrap gap-1">

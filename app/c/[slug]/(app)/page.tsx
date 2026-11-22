@@ -4,6 +4,7 @@ import type { Category, CategoryGroup, ProviderRow } from "@/lib/types";
 import { groupCategories } from "@/lib/groups";
 import { filterKind, parseKind, parseOrder, sortProviders } from "@/lib/listing";
 import { ProviderCard } from "@/components/ProviderCard";
+import { parseCondoKind } from "@/lib/condo-kind";
 import { ListControls } from "@/components/ListControls";
 import { SearchBox } from "@/components/SearchBox";
 import { AdCard } from "@/components/AdCard";
@@ -72,7 +73,7 @@ export default async function Home({
         <SearchBox slug={slug} q={q} suggestions={suggestions} />
         <h2 className="font-extrabold">{results.length} resultado(s) para “{q}”</h2>
         <ListControls base={`/c/${slug}`} q={q} order={order} kind={kind} orders={["relevancia", "melhores", "avaliados", "recentes"]} />
-        {results.map((p) => <ProviderCard key={p.id} slug={slug} p={p} planBadge={flags.plans} viewerCondoId={condo.id} />)}
+        {results.map((p) => <ProviderCard key={p.id} slug={slug} p={p} planBadge={flags.plans} viewerCondoId={condo.id} kind={parseCondoKind(condo.kind)} />)}
         {results.length === 0 && (
           <div className="card space-y-3 text-center text-navy/70">
             <p>Ninguém indicado para essa busca ainda. Conhece alguém?{" "}
@@ -195,13 +196,13 @@ export default async function Home({
       {topRated.length > 0 && (
         <section className="space-y-3">
           <h2 className="text-lg font-extrabold">⭐ Mais bem avaliados do condomínio</h2>
-          {topRated.map((p) => <ProviderCard key={p.id} slug={slug} p={p} planBadge={flags.plans} viewerCondoId={condo.id} />)}
+          {topRated.map((p) => <ProviderCard key={p.id} slug={slug} p={p} planBadge={flags.plans} viewerCondoId={condo.id} kind={parseCondoKind(condo.kind)} />)}
         </section>
       )}
       {newest.length > 0 && (
         <section className="space-y-3">
           <h2 className="text-lg font-extrabold">🆕 Indicações recentes</h2>
-          {newest.map((p) => <ProviderCard key={p.id} slug={slug} p={p} planBadge={flags.plans} viewerCondoId={condo.id} />)}
+          {newest.map((p) => <ProviderCard key={p.id} slug={slug} p={p} planBadge={flags.plans} viewerCondoId={condo.id} kind={parseCondoKind(condo.kind)} />)}
         </section>
       )}
       {providers.length === 0 && (
