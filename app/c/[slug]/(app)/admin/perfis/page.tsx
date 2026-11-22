@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireAdmin } from "@/lib/condo";
 import type { Category, CategoryGroup, ProviderRow } from "@/lib/types";
 import { groupCategories } from "@/lib/groups";
+import { naturalCompare } from "@/lib/natural";
 import { providerCategoryLabels } from "@/lib/categories";
 import { formatWhatsapp } from "@/lib/phone";
 import { adminClearProvidersFlags, adminSetProvidersStatus } from "../../../actions";
@@ -26,7 +27,7 @@ export default async function AdminPerfis({ params, searchParams }: { params: Pr
 
   // condomínios que a pessoa administra (a lista junta todos)
   const { data: ov } = await supabase.rpc("admin_overview");
-  const condos = ((ov ?? []) as { condo_id: string; slug: string; name: string }[]).map((c) => ({ id: c.condo_id, slug: c.slug, name: c.name }));
+  const condos = ((ov ?? []) as { condo_id: string; slug: string; name: string }[]).map((c) => ({ id: c.condo_id, slug: c.slug, name: c.name })).sort((a, b) => naturalCompare(a.name, b.name));
   const condoIds = condos.length ? condos.map((c) => c.id) : [];
   const bySlug = new Map(condos.map((c) => [c.id, c]));
 

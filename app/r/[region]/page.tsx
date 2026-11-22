@@ -4,13 +4,14 @@ import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { getUser } from "@/lib/condo";
 import { Logo } from "@/components/Logo";
+import { naturalCompare } from "@/lib/natural";
 
 type Row = { region_name: string; condo_id: string; condo_slug: string; condo_name: string };
 
 async function load(region: string): Promise<Row[]> {
   const supabase = await createClient();
   const { data } = await supabase.rpc("region_public", { p_slug: region });
-  return (data ?? []) as Row[];
+  return ((data ?? []) as Row[]).sort((a, b) => naturalCompare(a.condo_name, b.condo_name));
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ region: string }> }): Promise<Metadata> {

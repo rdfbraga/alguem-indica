@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/condo";
 import { StatTile } from "@/components/StatTile";
+import { naturalCompare } from "@/lib/natural";
 import { platformDeleteRegion, platformSetAdmin } from "../../../actions";
 import { AddAdminByEmailForm, AutoApproveForm, EditCondoForm, NewCondoForm, RegionForm } from "./PlatformForms";
 
@@ -39,7 +40,7 @@ export default async function AdminCondominios({
   let found: Person[] = [];
   if (platform?.is_admin) {
     const [c, r] = await Promise.all([supabase.rpc("platform_condos"), supabase.rpc("platform_regions")]);
-    pCondos = (c.data ?? []) as PCondo[];
+    pCondos = ((c.data ?? []) as PCondo[]).sort((a, b) => naturalCompare(a.name, b.name));
     pRegions = (r.data ?? []) as PRegion[];
     const lists = await Promise.all(pCondos.map((c) => supabase.rpc("platform_condo_admins", { p_condo: c.id })));
     pCondos.forEach((c, i) => adminsByCondo.set(c.id, ((lists[i].data ?? []) as Person[])));
@@ -49,7 +50,7 @@ export default async function AdminCondominios({
       found = (f ?? []) as Person[];
     }
   }
-  const rows = ((data ?? []) as Row[]).sort((a, b) => pending(b) - pending(a) || a.name.localeCompare(b.name, "pt-BR"));
+  const rows = ((data ?? []) as Row[]).sort((a, b) => pending(b) - pending(a) || naturalCompare(a.name, b.name));
 
   if (error) {
     return (
