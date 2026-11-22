@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { cookies } from "next/headers";
+import { LAST_CONDO_COOKIE, pickCondo } from "@/lib/last-condo";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { getUser } from "@/lib/condo";
@@ -26,8 +28,9 @@ export async function generateMetadata({ params }: { params: Promise<{ region: s
 }
 
 /** Página pública da região: a pessoa escolhe o próprio condomínio e segue para o login. Um link só para grupos de vários condomínios. */
-export default async function Regiao({ params }: { params: Promise<{ region: string }> }) {
+export default async function Regiao({ params, searchParams }: { params: Promise<{ region: string }>; searchParams: Promise<{ trocar?: string }> }) {
   const { region } = await params;
+  const { trocar } = await searchParams;
   const rows = await load(region);
   if (!rows.length) notFound();
 
@@ -38,9 +41,11 @@ export default async function Regiao({ params }: { params: Promise<{ region: str
     const supabase = await createClient();
     const { data } = await supabase.from("members").select("condo_id").eq("user_id", user.id).in("condo_id", rows.map((r) => r.condo_id));
     mine = new Set((data ?? []).map((m) => m.condo_id as string));
-    if (mine.size === 1) {
-      const only = rows.find((r) => mine.has(r.condo_id));
-      if (only) redirect(`/c/${only.condo_slug}`);
+    // Quem já mora em um (ou volta ao último que usou) vai direto, a não ser que tenha pedido para trocar.
+    if (!trocar && mine.size > 0) {
+      const mySlugs = rows.filter((r) => mine.has(r.condo_id)).map((r) => r.condo_slug);
+      const target = pickCondo(mySlugs, (await cookies()).get(LAST_CONDO_COOKIE)?.value);
+      if (target) redirect(`/c/${target}`);
     }
   }
 

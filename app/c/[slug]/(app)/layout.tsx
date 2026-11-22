@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { requireMember } from "@/lib/condo";
 import { Logo } from "@/components/Logo";
+import { CondoSwitcher, type MyCondo } from "@/components/CondoSwitcher";
+import { getRegionInfo } from "@/lib/condo";
 import { signOut } from "../actions";
 
 export default async function AppLayout({
@@ -12,6 +14,10 @@ export default async function AppLayout({
 }) {
   const { slug } = await params;
   const { condo, member, supabase } = await requireMember(slug);
+  // Troca de condomínio: os condomínios da pessoa e, se houver região, o caminho para entrar em outro (ignora a falta da migration 0032)
+  const { data: mineData } = await supabase.rpc("my_condos");
+  const myCondos = ((mineData ?? []) as { slug: string; name: string }[]).map((c): MyCondo => ({ slug: c.slug, name: c.name }));
+  const region = await getRegionInfo(condo.id);
   let newMessages = 0;
   if (member.role === "admin") {
     const { count } = await supabase
@@ -36,7 +42,7 @@ export default async function AppLayout({
       <header className="sticky top-0 z-10 flex items-center justify-between border-b border-orange-100 bg-white/90 px-4 py-3 backdrop-blur">
         <div className="min-w-0">
           <Logo href={`/c/${slug}`} />
-          <div className="mt-0.5 truncate pl-[3.1rem] text-xs font-semibold text-sky-brand">{condo.name}</div>
+          <CondoSwitcher current={{ slug, name: condo.name }} condos={myCondos.length ? myCondos : [{ slug, name: condo.name }]} regionSlug={region?.slug ?? null} />
         </div>
         <div className="flex shrink-0 items-center gap-3 text-sm">
           {member.role === "admin" && (

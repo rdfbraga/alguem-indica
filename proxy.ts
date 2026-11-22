@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { LAST_CONDO_COOKIE, condoSlugFromPath } from "@/lib/last-condo";
 
 // Renova o token de sessão do Supabase a cada requisição.
 export async function proxy(request: NextRequest) {
@@ -27,6 +28,11 @@ export async function proxy(request: NextRequest) {
     },
   );
   await supabase.auth.getUser();
+  // Lembra o último condomínio aberto, para a página inicial e a da região levarem a pessoa de volta.
+  const slug = condoSlugFromPath(request.nextUrl.pathname);
+  if (slug && request.cookies.get(LAST_CONDO_COOKIE)?.value !== slug) {
+    response.cookies.set(LAST_CONDO_COOKIE, slug, { path: "/", maxAge: 60 * 60 * 24 * 365, sameSite: "lax" });
+  }
   return response;
 }
 
