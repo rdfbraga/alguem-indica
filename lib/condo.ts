@@ -68,3 +68,11 @@ export const getScope = cache(async (condoId: string): Promise<string[]> => {
   const ids = Array.isArray(data) ? (data as string[]) : [];
   return !error && ids.length ? ids : [condoId];
 });
+
+/** Região do condomínio (identificador e nome), se houver. Serve para o convite escolher o link da região. */
+export const getRegionInfo = cache(async (condoId: string): Promise<{ slug: string; name: string } | null> => {
+  const supabase = await createClient();
+  const { data } = await supabase.rpc("condo_region_info", { p_condo: condoId });
+  const row = Array.isArray(data) ? (data[0] as { slug: string; name: string } | undefined) : undefined;
+  return row ?? null;
+});

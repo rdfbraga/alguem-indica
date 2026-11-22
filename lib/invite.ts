@@ -18,3 +18,14 @@ export function buildInviteMessage(args: { residentName?: string | null; condoNa
 export function inviteWhatsappLink(text: string): string {
   return `https://wa.me/?text=${encodeURIComponent(text)}`;
 }
+
+/** Convite para grupos com moradores de VÁRIOS condomínios: o link leva à página em que cada um escolhe o seu. */
+export function buildRegionInviteMessage(args: { residentName?: string | null; regionName: string; url: string }): string {
+  const first = (args.residentName ?? "").trim().split(/\s+/)[0];
+  const who = first ? `Aqui é ${first}. ` : "";
+  return (
+    `Oi, vizinhos! 👋 ${who}Estou usando o *Alguém indica?* para achar prestadores que os moradores dos condomínios da nossa região já aprovaram: ` +
+    `eletricista, diarista, médico, o que precisar. É grátis.\n\nEscolha o seu condomínio e entre por aqui:\n${args.url}\n\n` +
+    `Se você conhece um bom profissional, indica lá também. Ajuda todo mundo. 🙏`
+  );
+}

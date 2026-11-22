@@ -22,3 +22,14 @@ test("link do WhatsApp codifica a mensagem", () => {
   const link = inviteWhatsappLink("oi & tchau");
   assert.equal(link, "https://wa.me/?text=oi%20%26%20tchau");
 });
+
+import { buildRegionInviteMessage } from "./invite.ts";
+
+test("convite da região fala dos condomínios da região e leva o link da região", () => {
+  const t = buildRegionInviteMessage({ residentName: "Maria da Silva", regionName: "Parque Barueri", url: "https://x.app/r/parque-barueri" });
+  assert.match(t, /Aqui é Maria\./);
+  assert.match(t, /condomínios da nossa região/);
+  assert.match(t, /Escolha o seu condomínio/);
+  assert.ok(t.includes("\nhttps://x.app/r/parque-barueri\n"));
+  assert.ok(!t.includes("Silva"));
+});

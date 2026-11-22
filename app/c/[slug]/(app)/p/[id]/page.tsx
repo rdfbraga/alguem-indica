@@ -1,11 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getFeatures, getScope, requireMember } from "@/lib/condo";
+import { getFeatures, getRegionInfo, getScope, requireMember } from "@/lib/condo";
 import { formatWhatsapp } from "@/lib/phone";
 import { instagramUrl, websiteLabel } from "@/lib/links";
 import { reviewAuthorLabel } from "@/lib/regions";
-import { InviteButton } from "@/components/InviteButton";
-import { buildInviteMessage } from "@/lib/invite";
+import { InviteChoices } from "@/components/InviteChoices";
 import { ViewTracker } from "@/components/ViewTracker";
 import type { ProviderStats } from "@/lib/stats";
 import type { Category, CategoryGroup, PhotoRow, ProviderRow, ReviewRow, ServiceRow } from "@/lib/types";
@@ -40,6 +39,7 @@ export default async function Prestador({
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
 
   const scope = await getScope(condo.id);   // este condomínio + os da mesma região
+  const region = novo && novo !== "eu" ? await getRegionInfo(condo.id) : null;
   const { data } = await supabase.from("provider_listing").select("*").eq("id", id).in("condo_id", scope).maybeSingle();
   if (!data) notFound();
   const p = data as ProviderRow;
@@ -144,7 +144,7 @@ export default async function Prestador({
         <div className="space-y-2 rounded-2xl bg-green-50 p-3 text-sm text-green-800">
           <p className="font-semibold text-green-700">Indicação publicada! Obrigado por ajudar os vizinhos. 🎉</p>
           <p>Quer chamar mais vizinhos para avaliar e indicar também?</p>
-          <InviteButton url={`${siteUrl}/c/${slug}`} text={buildInviteMessage({ residentName: member.full_name, condoName: condo.name, url: `${siteUrl}/c/${slug}` })} />
+          <InviteChoices slug={slug} residentName={member.full_name} condoName={condo.name} region={region} />
         </div>
       ) : null}
       {jaexiste && !reivindicar && <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-800">Este profissional já estava cadastrado. Que tal avaliá-lo?</p>}
