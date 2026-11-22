@@ -31,10 +31,10 @@ export default async function Prestador({
   searchParams,
 }: {
   params: Promise<{ slug: string; id: string }>;
-  searchParams: Promise<{ novo?: string; jaexiste?: string; addcat?: string; catsOk?: string; catsErro?: string; plano?: string; reivindicar?: string }>;
+  searchParams: Promise<{ novo?: string; jaexiste?: string; addcat?: string; catsOk?: string; catsErro?: string; plano?: string; reivindicar?: string; editar?: string }>;
 }) {
   const { slug, id } = await params;
-  const { novo, jaexiste, addcat, catsOk, catsErro, plano, reivindicar } = await searchParams;
+  const { novo, jaexiste, addcat, catsOk, catsErro, plano, reivindicar, editar } = await searchParams;
   const { condo, user, member, supabase } = await requireMember(slug, `/c/${slug}/p/${id}`);
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
 
@@ -254,7 +254,7 @@ export default async function Prestador({
           </Link>
         )}
         {canEdit && (
-          <details className="rounded-2xl border border-navy/10 p-3">
+          <details className="rounded-2xl border border-navy/10 p-3" open={editar === "1"}>
             <summary className="cursor-pointer text-sm font-bold text-sky-brand">✏️ Editar perfil (nome, telefone, descrição e foto)</summary>
             <EditProfile slug={slug} providerId={p.id} userId={user.id} initial={{ name: p.name, description: p.description, whatsapp: p.whatsapp, photo_url: p.photo_url, instagram: p.instagram ?? null, website: p.website ?? null }} />
           </details>

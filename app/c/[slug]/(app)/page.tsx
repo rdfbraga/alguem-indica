@@ -157,9 +157,9 @@ export default async function Home({
       <InstallPrompt />
 
       {(ownedCount ?? 0) > 0 && (
-        <Link href={`/c/${slug}/resultados`} className="card flex items-center gap-3 transition hover:border-brand-500">
+        <Link href={`/c/${slug}/meu-perfil`} className="card flex items-center gap-3 transition hover:border-brand-500">
           <span className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-50 text-xl">📊</span>
-          <span className="flex-1"><b>Veja como seu perfil está indo</b><br /><span className="text-sm text-navy/65">Visitas e cliques no WhatsApp</span></span>
+          <span className="flex-1"><b>Meu perfil</b><br /><span className="text-sm text-navy/65">Veja como está indo, edite e peça avaliações</span></span>
           <span className="text-navy/40" aria-hidden>›</span>
         </Link>
       )}

@@ -18,6 +18,16 @@ export default async function AppLayout({
   const { data: mineData } = await supabase.rpc("my_condos");
   const myCondos = ((mineData ?? []) as { slug: string; name: string }[]).map((c): MyCondo => ({ slug: c.slug, name: c.name }));
   const region = await getRegionInfo(condo.id);
+  // "Meu perfil": quem é dono de um perfil, ou cadastrou o próprio e aguarda confirmação
+  const user = (await supabase.auth.getUser()).data.user;
+  let hasProfile = false;
+  if (user) {
+    const [{ count: owned }, { count: pendingClaims }] = await Promise.all([
+      supabase.from("providers").select("id", { count: "exact", head: true }).eq("owner_id", user.id),
+      supabase.from("profile_claims").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("status", "pending"),
+    ]);
+    hasProfile = (owned ?? 0) > 0 || (pendingClaims ?? 0) > 0;
+  }
   let newMessages = 0;
   if (member.role === "admin") {
     const { count } = await supabase
@@ -45,12 +55,15 @@ export default async function AppLayout({
           <CondoSwitcher current={{ slug, name: condo.name }} condos={myCondos.length ? myCondos : [{ slug, name: condo.name }]} regionSlug={region?.slug ?? null} />
         </div>
         <div className="flex shrink-0 items-center gap-3 text-sm">
+          {hasProfile && (
+            <Link href={`/c/${slug}/meu-perfil`} className="rounded-xl bg-brand-50 px-2.5 py-1 font-bold text-brand-700">🧰 Meu perfil</Link>
+          )}
           {member.role === "admin" && (
             <Link href={`/c/${slug}/admin`} className="rounded-xl bg-sky-soft px-2.5 py-1 font-bold text-sky-brand">
               Admin{newMessages > 0 && <span className="ml-1 rounded-full bg-brand-500 px-1.5 text-xs text-white">{newMessages}</span>}
             </Link>
           )}
-          <Link href={`/c/${slug}/ajuda`} className="flex items-center gap-1 whitespace-nowrap font-semibold text-navy/60 hover:text-navy" aria-label="Ajuda e contato">💬 <span>Ajuda</span></Link>
+          <Link href={`/c/${slug}/ajuda`} className="flex items-center gap-1 whitespace-nowrap font-semibold text-navy/60 hover:text-navy" aria-label="Ajuda e contato">💬 <span className={hasProfile ? "hidden sm:inline" : ""}>Ajuda</span></Link>
           <form action={signOut.bind(null, slug)}>
             <button className="font-semibold text-navy/60 hover:text-navy">Sair</button>
           </form>
