@@ -11,6 +11,7 @@ import { AdCard } from "@/components/AdCard";
 import { ReviewPrompt, type ReviewPromptItem } from "@/components/ReviewPrompt";
 import { NeighborsLooking, type OpenRequest, type RequestUpdate } from "@/components/NeighborsLooking";
 import { RequestForm } from "@/components/RequestForm";
+import { HelpRequestButtons } from "@/components/HelpRequestButtons";
 import { InviteChoices } from "@/components/InviteChoices";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { ProviderCta } from "@/components/ProviderCta";
@@ -79,7 +80,13 @@ export default async function Home({
             <p>Ninguém indicado para essa busca ainda. Conhece alguém?{" "}
               <Link href={`/c/${slug}/novo?servico=${encodeURIComponent(q)}`} className="font-bold text-brand-700 underline">Indique agora</Link>.</p>
             <p className="text-sm">Anotamos sua busca: se outros vizinhos procurarem o mesmo, aparece em “Os vizinhos estão procurando” para alguém indicar.</p>
-            <div className="mx-auto max-w-xs text-left"><RequestForm slug={slug} label={q} cta="🔔 Quero ser avisado por e-mail" /></div>
+            <div className="mx-auto max-w-xs space-y-3 text-left">
+              <div className="space-y-1">
+                <div className="text-xs font-semibold text-navy/65">Pergunte aos vizinhos nos grupos de WhatsApp</div>
+                <HelpRequestButtons slug={slug} residentName={member.full_name} condoName={condo.name} what={q} region={region} />
+              </div>
+              <RequestForm slug={slug} label={q} cta="🔔 Quero ser avisado por e-mail" />
+            </div>
             <p className="text-sm">Ou escolha uma categoria:</p>
             <div className="flex flex-wrap justify-center gap-2">
               {categories.slice(0, 8).map((c) => (

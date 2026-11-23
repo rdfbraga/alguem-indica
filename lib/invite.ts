@@ -43,3 +43,18 @@ export function buildProviderClaimMessage(args: { providerName: string; resident
     `Assuma por aqui:\n${args.url}`
   );
 }
+
+/**
+ * Pedido de ajuda para os grupos de WhatsApp: "estou procurando X e ainda não tem ninguém indicado".
+ * `what` é o que a pessoa procura (limpo e limitado); `url` leva ao app (idealmente direto ao cadastro da indicação).
+ */
+export function buildHelpRequestMessage(args: { residentName?: string | null; condoName: string; what: string; url: string }): string {
+  const first = (args.residentName ?? "").trim().split(/\s+/)[0];
+  const who = first ? `Aqui é ${first}. ` : "";
+  const what = args.what.replace(/\s+/g, " ").trim().slice(0, 60);
+  return (
+    `Oi, vizinhos! 👋 ${who}Alguém conhece ou indica *${what}*?\n\n` +
+    `Procurei no *Alguém indica?*, o app de indicações do ${bareCondoName(args.condoName)}, e ainda não tem ninguém cadastrado.\n\n` +
+    `Se você conhece, indica por aqui (leva 1 minuto):\n${args.url}\n\nObrigado! 🙏`
+  );
+}

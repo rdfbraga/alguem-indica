@@ -42,3 +42,19 @@ test("mensagem para o profissional leva o link e só o primeiro nome de quem ind
   assert.ok(t.includes("\nhttps://x.app/c/pb/assumir/1"));
   assert.ok(!t.includes("Silva"));
 });
+
+import { buildHelpRequestMessage } from "./invite.ts";
+
+test("pedido de ajuda cita o que procura, o condomínio e leva o link", () => {
+  const t = buildHelpRequestMessage({ residentName: "Maria da Silva", condoName: "Condomínio Parque Barueri", what: "  concerto   de impressora ", url: "https://x.app/c/pb/novo?servico=x" });
+  assert.match(t, /Aqui é Maria\./);
+  assert.match(t, /\*concerto de impressora\*/);
+  assert.match(t, /app de indicações do Parque Barueri/);
+  assert.ok(t.includes("\nhttps://x.app/c/pb/novo?servico=x\n"));
+  assert.ok(!t.includes("Silva"));
+});
+test("o que se procura é limitado a 60 letras", () => {
+  const t = buildHelpRequestMessage({ condoName: "X", what: "a".repeat(200), url: "u" });
+  assert.ok(t.includes(`*${"a".repeat(60)}*`));
+  assert.ok(!t.includes("a".repeat(61)));
+});
