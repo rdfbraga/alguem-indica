@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import { requireMember } from "@/lib/condo";
 import { Logo } from "@/components/Logo";
 import { NewProviderFab } from "@/components/NewProviderFab";
@@ -15,8 +17,15 @@ export default async function AppLayout({
 }) {
   const { slug } = await params;
   const { condo, member, supabase } = await requireMember(slug);
+  // Conta de prestador (não mora no condomínio): só enxerga o próprio perfil. Qualquer outra tela volta para "Meu perfil".
+  const isProvider = member.role === "provider";
+  if (isProvider) {
+    const path = ((await headers()).get("x-next-path") ?? "").split("?")[0];
+    const ok = new RegExp(`^/c/${slug}/(meu-perfil|resultados)$|^/c/${slug}/p/[0-9a-f-]{36}$`).test(path);
+    if (!ok) redirect(`/c/${slug}/meu-perfil`);
+  }
   // Troca de condomínio: os condomínios da pessoa e, se houver região, o caminho para entrar em outro (ignora a falta da migration 0032)
-  const { data: mineData } = await supabase.rpc("my_condos");
+  const { data: mineData } = isProvider ? { data: null } : await supabase.rpc("my_condos");
   const myCondos = ((mineData ?? []) as { slug: string; name: string }[]).map((c): MyCondo => ({ slug: c.slug, name: c.name }));
   const region = await getRegionInfo(condo.id);
   // "Meu perfil": quem é dono de um perfil, ou cadastrou o próprio e aguarda confirmação
@@ -56,7 +65,7 @@ export default async function AppLayout({
           <CondoSwitcher current={{ slug, name: condo.name }} condos={myCondos.length ? myCondos : [{ slug, name: condo.name }]} regionSlug={region?.slug ?? null} />
         </div>
         <div className="flex shrink-0 items-center gap-3 text-sm">
-          {hasProfile && (
+          {(hasProfile || isProvider) && (
             <Link href={`/c/${slug}/meu-perfil`} className="rounded-xl bg-brand-50 px-2.5 py-1 font-bold text-brand-700">🧰 Meu perfil</Link>
           )}
           {member.role === "admin" && (
@@ -64,14 +73,14 @@ export default async function AppLayout({
               Admin{newMessages > 0 && <span className="ml-1 rounded-full bg-brand-500 px-1.5 text-xs text-white">{newMessages}</span>}
             </Link>
           )}
-          <Link href={`/c/${slug}/ajuda`} className="flex items-center gap-1 whitespace-nowrap font-semibold text-navy/60 hover:text-navy" aria-label="Ajuda e contato">💬 <span className={hasProfile ? "hidden sm:inline" : ""}>Ajuda</span></Link>
+          {!isProvider && <Link href={`/c/${slug}/ajuda`} className="flex items-center gap-1 whitespace-nowrap font-semibold text-navy/60 hover:text-navy" aria-label="Ajuda e contato">💬 <span className={hasProfile ? "hidden sm:inline" : ""}>Ajuda</span></Link>}
           <form action={signOut.bind(null, slug)}>
             <button className="font-semibold text-navy/60 hover:text-navy">Sair</button>
           </form>
         </div>
       </header>
       <main className="px-4 py-4">{children}</main>
-      <NewProviderFab slug={slug} />
+      {!isProvider && <NewProviderFab slug={slug} />}
     </div>
   );
 }

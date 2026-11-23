@@ -21,8 +21,9 @@ function todo(p: ProviderRow): string[] {
 
 export default async function MeuPerfil({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const { condo, user, supabase } = await requireMember(slug);
+  const { condo, user, member, supabase } = await requireMember(slug);
   const scope = await getScope(condo.id);
+  const isProvider = member.role === "provider";
 
   // Meus perfis: onde sou dona, ou cadastrei o meu e aguardo a confirmação.
   const { data } = await supabase
@@ -30,6 +31,12 @@ export default async function MeuPerfil({ params }: { params: Promise<{ slug: st
     .or(`owner_id.eq.${user.id},and(created_by.eq.${user.id},self_pending.eq.true)`)
     .order("created_at");
   const profiles = (data ?? []) as ProviderRow[];
+
+  // Pedidos para assumir ainda em análise (que ainda não viraram perfil seu)
+  const { data: claimRows } = await supabase.from("profile_claims").select("provider_id").eq("user_id", user.id).eq("status", "pending");
+  const claimIds = ((claimRows ?? []) as { provider_id: string }[]).map((c) => c.provider_id).filter((id) => !profiles.some((p) => p.id === id));
+  const { data: claimProv } = claimIds.length ? await supabase.from("providers").select("id,name").in("id", claimIds) : { data: [] };
+  const waiting = (claimProv ?? []) as { id: string; name: string }[];
 
   const stats = await Promise.all(
     profiles.map(async (p) => {
@@ -105,7 +112,22 @@ export default async function MeuPerfil({ params }: { params: Promise<{ slug: st
         );
       })}
 
-      {profiles.length === 0 && (
+      {waiting.map((w) => (
+        <div key={w.id} className="card space-y-1 !border-amber-300 !bg-amber-50">
+          <div className="font-extrabold">⏳ {w.name}</div>
+          <p className="text-sm text-amber-900">Seu pedido para assumir este perfil está em análise. A administração confirma que é você e libera a edição e os números.</p>
+        </div>
+      ))}
+
+      {profiles.length === 0 && waiting.length === 0 && isProvider && (
+        <div className="card space-y-2 text-center">
+          <p className="text-3xl">🧰</p>
+          <p className="font-bold">Você ainda não assumiu nenhum perfil</p>
+          <p className="text-sm text-navy/70">Peça o link para assumir a quem te indicou, ou à administração do condomínio.</p>
+        </div>
+      )}
+
+      {profiles.length === 0 && waiting.length === 0 && !isProvider && (
         <div className="card space-y-3 text-center">
           <p className="text-3xl">🧰</p>
           <p className="font-bold">Você ainda não tem um perfil aqui</p>

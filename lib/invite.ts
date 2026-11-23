@@ -29,3 +29,17 @@ export function buildRegionInviteMessage(args: { residentName?: string | null; r
     `Se você conhece um bom profissional, indica lá também. Ajuda todo mundo. 🙏`
   );
 }
+
+/**
+ * Mensagem para o PROFISSIONAL indicado (sai do WhatsApp de quem indicou). Leva o link para assumir o perfil.
+ * Só o primeiro nome de quem indicou e o nome do condomínio.
+ */
+export function buildProviderClaimMessage(args: { providerName: string; residentName?: string | null; condoName: string; url: string }): string {
+  const first = (args.residentName ?? "").trim().split(/\s+/)[0];
+  const who = first ? `${first}, do ${bareCondoName(args.condoName)}` : `um morador do ${bareCondoName(args.condoName)}`;
+  return (
+    `Olá! 👋 Aqui é ${who}. Indiquei seu trabalho no *Alguém indica?*, o app em que os vizinhos do condomínio indicam e avaliam prestadores de confiança.\n\n` +
+    `Você pode assumir o seu perfil de graça: editar foto e descrição, ver quantas pessoas viram e receber avaliações dos vizinhos.\n\n` +
+    `Assuma por aqui:\n${args.url}`
+  );
+}

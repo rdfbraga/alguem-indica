@@ -5,6 +5,8 @@ import { formatWhatsapp } from "@/lib/phone";
 import { instagramUrl, websiteLabel } from "@/lib/links";
 import { reviewAuthorLabel } from "@/lib/regions";
 import { blockText, parseCondoKind } from "@/lib/condo-kind";
+import { buildProviderClaimMessage } from "@/lib/invite";
+import { whatsappLink } from "@/lib/phone";
 import { InviteChoices } from "@/components/InviteChoices";
 import { ViewTracker } from "@/components/ViewTracker";
 import type { ProviderStats } from "@/lib/stats";
@@ -52,6 +54,11 @@ export default async function Prestador({
     searchTags = (tg?.search_tags as string | null) ?? null;
   }   // indicado em outro condomínio da região: sem bloco/unidade, sem ações de admin
   const adminHere = member.role === "admin" && !foreign;
+  // Profissional externo ainda sem dono: quem indicou (ou a administração) pode avisá-lo pelo WhatsApp com o link para assumir
+  const canNotifyProvider = p.kind === "external" && !p.owner_id && !foreign && (p.created_by === user.id || adminHere);
+  const notifyProviderHref = canNotifyProvider
+    ? whatsappLink(p.whatsapp, buildProviderClaimMessage({ providerName: p.name, residentName: member.full_name, condoName: condo.name, url: `${SITE_URL}/c/${slug}/assumir/${p.id}` }))
+    : null;
   const { data: rs } = await supabase
     .from("reviews").select("*").eq("provider_id", id).eq("status", "visible").order("created_at", { ascending: false });
   const reviews = (rs ?? []) as ReviewRow[];
@@ -150,6 +157,12 @@ export default async function Prestador({
       ) : novo ? (
         <div className="space-y-2 rounded-2xl bg-green-50 p-3 text-sm text-green-800">
           <p className="font-semibold text-green-700">Indicação publicada! Obrigado por ajudar os vizinhos. 🎉</p>
+          {notifyProviderHref && (
+            <div className="space-y-1.5 rounded-xl bg-white p-3">
+              <p><b>Avise o profissional!</b> Ele assume o perfil de graça e passa a receber as avaliações.</p>
+              <a href={notifyProviderHref} target="_blank" rel="noopener noreferrer" className="btn !bg-[#25D366] !px-4 !py-2 !text-sm hover:!bg-[#1ebe57]">📲 Avisar {p.name.split(" ")[0]} pelo WhatsApp</a>
+            </div>
+          )}
           <p>Quer chamar mais vizinhos para avaliar e indicar também?</p>
           <InviteChoices slug={slug} residentName={member.full_name} condoName={condo.name} region={region} />
         </div>
@@ -289,6 +302,9 @@ export default async function Prestador({
           </p>
         )}
         {isOwner && <p className="text-sm font-semibold text-green-700">Você é o dono deste perfil. 🎉</p>}
+        {notifyProviderHref && novo !== "1" && (
+          <a href={notifyProviderHref} target="_blank" rel="noopener noreferrer" className="btn-secondary !px-4 !py-2 !text-sm">📲 Avisar o profissional para assumir o perfil</a>
+        )}
         {!isOwner && !p.owner_id && (hasPendingClaim
           ? <p className="rounded-2xl bg-amber-50 p-3 text-sm text-amber-900">⏳ Seu pedido para assumir este perfil está em análise.</p>
           : <ClaimProfile slug={slug} providerId={p.id} />)}

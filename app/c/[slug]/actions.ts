@@ -338,6 +338,41 @@ const CLAIM_ERRORS: [string, string][] = [
   ["too_many", "Você já tem 3 pedidos em análise. Aguarde a resposta da administração."],
 ];
 
+// Prestador que não mora no condomínio: cria a conta de prestador (só nome) e pede para assumir o perfil.
+export async function becomeProviderAndClaim(slug: string, providerId: string, _: FormState, fd: FormData): Promise<FormState> {
+  const condo = await getCondo(slug);
+  const user = await getUser();
+  if (!user) redirect(`/c/${slug}/entrar`);
+  if (!UUID.test(providerId)) return { error: "Perfil inválido." };
+  const name = str(fd, "full_name");
+  if (name.length < 2) return { error: "Informe seu nome." };
+  if (fd.get("terms") !== "on") return { error: "É preciso aceitar os termos para continuar." };
+  const supabase = await createClient();
+  const { error: joinError } = await supabase.rpc("join_as_provider", { p_condo: condo.id, p_name: name });
+  if (joinError) {
+    console.error("join_as_provider", joinError.message);
+    return { error: "Não foi possível criar o seu acesso. Tente de novo." };
+  }
+  const { error } = await supabase.rpc("request_profile_claim", { p_provider: providerId, p_note: "Pediu pelo link enviado ao profissional" });
+  if (error) {
+    const known = CLAIM_ERRORS.find(([k]) => error.message?.includes(k));
+    // "já pedi" ou "já sou o dono": segue para Meu perfil do mesmo jeito
+    if (!known || known[0] === "already_pending" || known[0] === "already_owner") redirect(`/c/${slug}/meu-perfil`);
+    return { error: known[1] };
+  }
+  revalidatePath(`/c/${slug}`, "layout");
+  redirect(`/c/${slug}/meu-perfil`);
+}
+
+// Morador que recebeu o link para assumir o perfil.
+export async function claimFromLink(slug: string, providerId: string) {
+  const { supabase } = await requireMember(slug);
+  if (!UUID.test(providerId)) redirect(`/c/${slug}`);
+  await supabase.rpc("request_profile_claim", { p_provider: providerId, p_note: "Pediu pelo link enviado ao profissional" });
+  revalidatePath(`/c/${slug}`, "layout");
+  redirect(`/c/${slug}/meu-perfil`);
+}
+
 export async function requestProfileClaim(slug: string, providerId: string, _: FormState, fd: FormData): Promise<FormState> {
   const { supabase } = await requireMember(slug);
   if (!UUID.test(providerId)) return { error: "Perfil inválido." };

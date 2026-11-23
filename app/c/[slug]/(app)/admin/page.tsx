@@ -80,7 +80,7 @@ export default async function AdminModerar({ params }: { params: Promise<{ slug:
     ? ((await supabase.from("providers").select("id,name,whatsapp,kind,block,created_by").in("id", claims.map((c) => c.provider_id))).data ?? [])
     : [];
   const claimMembers = claims.length
-    ? ((await supabase.from("members").select("user_id,full_name,block,unit").in("condo_id", await getScope(condo.id)).in("user_id", claims.map((c) => c.user_id))).data ?? [])
+    ? ((await supabase.from("members").select("user_id,full_name,block,unit,role").in("condo_id", await getScope(condo.id)).in("user_id", claims.map((c) => c.user_id))).data ?? [])
     : [];
   const fbNew = feedback.filter((f) => f.status === "new");
   const fbDone = feedback.filter((f) => f.status !== "new").slice(0, 15);
@@ -113,7 +113,7 @@ export default async function AdminModerar({ params }: { params: Promise<{ slug:
           return (
             <div key={c.id} className="card space-y-3">
               <p>
-                <b>{who ? `${who.full_name} · ${placeText(parseCondoKind(condo.kind), who.block, who.unit)}` : "Morador"}</b> quer assumir o perfil{" "}
+                <b>{who ? `${who.full_name} · ${who.role === "provider" ? "prestador (não mora no condomínio)" : placeText(parseCondoKind(condo.kind), who.block, who.unit)}` : "Morador"}</b> quer assumir o perfil{" "}
                 <Link className="font-bold underline" href={`/c/${slug}/p/${c.provider_id}`}>{prov?.name ?? "—"}</Link>
               </p>
               {prov && (

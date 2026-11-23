@@ -5,7 +5,7 @@ export type Member = {
   full_name: string;
   block: string;
   unit: string;
-  role: "resident" | "admin";
+  role: "resident" | "admin" | "provider";
 };
 export type Category = { id: number; slug: string; name: string; icon: string; group_id: number | null; keywords?: string | null };
 export type CategoryGroup = { id: number; slug: string; name: string; icon: string };

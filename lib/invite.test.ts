@@ -33,3 +33,12 @@ test("convite da região fala dos condomínios da região e leva o link da regi�
   assert.ok(t.includes("\nhttps://x.app/r/parque-barueri\n"));
   assert.ok(!t.includes("Silva"));
 });
+
+import { buildProviderClaimMessage } from "./invite.ts";
+
+test("mensagem para o profissional leva o link e só o primeiro nome de quem indicou", () => {
+  const t = buildProviderClaimMessage({ providerName: "Maria", residentName: "João da Silva", condoName: "Condomínio Parque Barueri", url: "https://x.app/c/pb/assumir/1" });
+  assert.match(t, /Aqui é João, do Parque Barueri/);
+  assert.ok(t.includes("\nhttps://x.app/c/pb/assumir/1"));
+  assert.ok(!t.includes("Silva"));
+});

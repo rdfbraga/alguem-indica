@@ -39,7 +39,7 @@ export default async function Regiao({ params, searchParams }: { params: Promise
   let mine = new Set<string>();
   if (user) {
     const supabase = await createClient();
-    const { data } = await supabase.from("members").select("condo_id").eq("user_id", user.id).in("condo_id", rows.map((r) => r.condo_id));
+    const { data } = await supabase.from("members").select("condo_id").eq("user_id", user.id).neq("role", "provider").in("condo_id", rows.map((r) => r.condo_id));
     mine = new Set((data ?? []).map((m) => m.condo_id as string));
     // Quem já mora em um (ou volta ao último que usou) vai direto, a não ser que tenha pedido para trocar.
     if (!trocar && mine.size > 0) {
