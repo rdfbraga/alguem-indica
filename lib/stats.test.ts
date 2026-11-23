@@ -29,3 +29,7 @@ test("datas", () => {
   assert.equal(shortDate("2026-11-19"), "19/11");
   assert.equal(longDate("2026-11-19"), "qui, 19/11");
 });
+
+test("sem período anterior, o texto não finge uma comparação", () => {
+  assert.equal(deltaText(delta(5, 0), 30), "✨ primeiros dados (ainda sem período anterior)");
+});

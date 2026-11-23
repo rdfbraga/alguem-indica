@@ -187,7 +187,7 @@ export default async function Home({
 
       <section className="card space-y-2 !bg-sky-soft/60">
         <h2 className="font-extrabold">👋 Quanto mais vizinhos, melhor fica</h2>
-        <p className="text-sm text-navy/75">Chame os moradores do seu bloco. Com mais gente indicando e avaliando, todo mundo acha prestador bom mais rápido.</p>
+        <p className="text-sm text-navy/75">Chame os moradores {parseCondoKind(condo.kind) === "houses" ? "da sua rua" : "do seu bloco"}. Com mais gente indicando e avaliando, todo mundo acha prestador bom mais rápido.</p>
         <InviteChoices slug={slug} residentName={member.full_name} condoName={condo.name} region={region} />
       </section>
 

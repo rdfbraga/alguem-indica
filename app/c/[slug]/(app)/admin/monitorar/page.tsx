@@ -84,9 +84,9 @@ export default async function AdminMonitorar({
             replace
             scroll={false}
             aria-current={d === days ? "true" : undefined}
-            className={`rounded-full border-2 px-3 py-1 text-sm font-bold ${d === days ? "border-brand-500 bg-brand-500 text-white" : "border-navy/15 bg-white text-navy"}`}
+            className={`whitespace-nowrap rounded-full border-2 px-3 py-1 text-sm font-bold ${d === days ? "border-brand-500 bg-brand-500 text-white" : "border-navy/15 bg-white text-navy"}`}
           >
-            Últimos {d} dias
+            {d} dias
           </Link>
         ))}
       </div>

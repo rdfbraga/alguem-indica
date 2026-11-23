@@ -33,7 +33,7 @@ export function deltaText(d: Delta, days: number): string {
     case "up": return `▲ ${d.pct}% ${ref}`;
     case "down": return `▼ ${Math.abs(d.pct!)}% ${ref}`;
     case "same": return `= igual ${ref}`;
-    case "new": return `▲ novo ${ref}`;
+    case "new": return "✨ primeiros dados (ainda sem período anterior)";
     default: return "sem dados ainda";
   }
 }

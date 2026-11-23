@@ -33,6 +33,9 @@ export function CondoSwitcher({ current, condos, regionSlug }: { current: MyCond
             </li>
           ))}
         </ul>
+        <p className="border-t border-navy/10 px-2.5 pb-1 pt-2 text-[11px] leading-snug text-navy/55">
+          Mora em um condomínio de outra região? Abra o link dele (peça no grupo do condomínio) e faça o cadastro lá. Depois ele aparece aqui.
+        </p>
         {regionSlug && (
           <Link href={`/r/${regionSlug}?trocar=1`} className="mt-1 block rounded-xl border-t border-navy/10 px-2.5 py-2 text-sm font-semibold text-sky-brand hover:bg-sky-soft">
             ＋ Entrar em outro condomínio da região

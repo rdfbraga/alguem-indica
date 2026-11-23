@@ -173,7 +173,7 @@ export default async function Prestador({
         <div className="space-y-2 rounded-2xl border-2 border-brand-500 bg-brand-50 p-3">
           <p className="font-bold">Este perfil já existe. É você? 🙋</p>
           <p className="text-sm text-navy/75">Um vizinho já indicou este número. Se é o seu serviço, peça para assumir o perfil: a administração confirma e você passa a editar tudo.</p>
-          <ClaimProfile slug={slug} providerId={p.id} defaultOpen />
+          <ClaimProfile slug={slug} providerId={p.id} defaultOpen kind={parseCondoKind(condo.kind)} />
         </div>
       )}
       {alreadyOwned && (
@@ -307,7 +307,7 @@ export default async function Prestador({
         )}
         {!isOwner && !p.owner_id && (hasPendingClaim
           ? <p className="rounded-2xl bg-amber-50 p-3 text-sm text-amber-900">⏳ Seu pedido para assumir este perfil está em análise.</p>
-          : <ClaimProfile slug={slug} providerId={p.id} />)}
+          : <ClaimProfile slug={slug} providerId={p.id} kind={parseCondoKind(condo.kind)} />)}
         {adminHere && (
           <form action={adminSetProviderStatus.bind(null, slug, p.id, p.status === "hidden" ? "active" : "hidden")}>
             <button className="btn-secondary !px-3 !py-2 !text-sm">
