@@ -859,6 +859,27 @@ export async function adminHideRequest(slug: string, key: string, label: string,
   revalidatePath(`/c/${slug}`, "layout");
 }
 
+// "É este": liga o pedido a um perfil que já está no app (quem pediu é avisado e o perfil passa a ser achado pelas palavras do pedido).
+export async function linkRequestProvider(slug: string, label: string, providerId: string) {
+  const { condo, supabase } = await requireMember(slug);
+  if (!UUID.test(providerId)) return;
+  const { error } = await supabase.rpc("link_request_provider", { p_condo: condo.id, p_label: label.slice(0, 60), p_provider: providerId });
+  if (error) {
+    console.error("linkRequestProvider", error.message);
+    redirect(`/c/${slug}/novo?servico=${encodeURIComponent(label.slice(0, 60))}&erro=${error.message.includes("limite_diario") ? "limite" : "ligar"}`);
+  }
+  revalidatePath(`/c/${slug}`, "layout");
+  after(() => notifyRequestMatches(providerId));   // avisa por e-mail quem pediu e marcou o aviso
+  redirect(`/c/${slug}/p/${providerId}?ligado=1`);
+}
+
+export async function adminClearSearchTags(slug: string, providerId: string) {
+  const { condo, supabase } = await requireAdmin(slug);
+  if (!UUID.test(providerId)) return;
+  await supabase.from("providers").update({ search_tags: null }).eq("id", providerId).eq("condo_id", condo.id);
+  revalidatePath(`/c/${slug}`, "layout");
+}
+
 export async function ackRequestUpdate(slug: string, id: string) {
   const { supabase } = await requireMember(slug);
   if (!UUID.test(id)) return;

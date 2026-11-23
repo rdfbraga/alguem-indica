@@ -3,7 +3,7 @@ import { ackRequestUpdate, adminHideRequest, cancelIndicationRequest, requestWit
 import { RequestForm } from "./RequestForm";
 
 export type OpenRequest = { group_key: string; label: string; category_slug: string | null; n: number; i_asked: boolean; i_notify?: boolean; i_searched?: boolean };
-export type RequestUpdate = { id: string; label: string; category_slug: string | null };
+export type RequestUpdate = { id: string; label: string; category_slug: string | null; provider_id?: string | null };
 
 const TOP = 4;
 
@@ -56,7 +56,7 @@ export function NeighborsLooking({ slug, requests, updates, isAdmin = false }: {
           </div>
           <div className="flex shrink-0 items-center gap-3">
             <Link
-              href={u.category_slug ? `/c/${slug}/categoria/${u.category_slug}` : `/c/${slug}?q=${encodeURIComponent(u.label)}`}
+              href={u.provider_id ? `/c/${slug}/p/${u.provider_id}` : u.category_slug ? `/c/${slug}/categoria/${u.category_slug}` : `/c/${slug}?q=${encodeURIComponent(u.label)}`}
               className="btn !px-3 !py-1.5 !text-xs"
             >Ver</Link>
             <form action={ackRequestUpdate.bind(null, slug, u.id)}>

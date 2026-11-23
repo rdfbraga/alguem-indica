@@ -20,7 +20,7 @@ import { profileOrigin, shareProfileLink, shareProfileText } from "@/lib/origin"
 import { Stars } from "@/components/Stars";
 import { providerCategoryLabels, parseCategoryIds } from "@/lib/categories";
 import { groupCategories } from "@/lib/groups";
-import { addCategoriesAndReturn, adminClearOwner, adminSetProviderStatus, deleteReviewReply } from "../../../actions";
+import { addCategoriesAndReturn, adminClearOwner, adminClearSearchTags, adminSetProviderStatus, deleteReviewReply } from "../../../actions";
 import { EditCategories } from "./EditCategories";
 import { EditProfile } from "./EditProfile";
 import { ClaimProfile } from "./ClaimProfile";
@@ -32,10 +32,10 @@ export default async function Prestador({
   searchParams,
 }: {
   params: Promise<{ slug: string; id: string }>;
-  searchParams: Promise<{ novo?: string; jaexiste?: string; addcat?: string; catsOk?: string; catsErro?: string; plano?: string; reivindicar?: string; editar?: string }>;
+  searchParams: Promise<{ novo?: string; jaexiste?: string; addcat?: string; catsOk?: string; catsErro?: string; plano?: string; reivindicar?: string; editar?: string; ligado?: string }>;
 }) {
   const { slug, id } = await params;
-  const { novo, jaexiste, addcat, catsOk, catsErro, plano, reivindicar, editar } = await searchParams;
+  const { novo, jaexiste, addcat, catsOk, catsErro, plano, reivindicar, editar, ligado } = await searchParams;
   const { condo, user, member, supabase } = await requireMember(slug, `/c/${slug}/p/${id}`);
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
 
@@ -44,7 +44,13 @@ export default async function Prestador({
   const { data } = await supabase.from("provider_listing").select("*").eq("id", id).in("condo_id", scope).maybeSingle();
   if (!data) notFound();
   const p = data as ProviderRow;
-  const foreign = p.condo_id !== condo.id;   // indicado em outro condomínio da região: sem bloco/unidade, sem ações de admin
+  const foreign = p.condo_id !== condo.id;
+  // Palavras de busca acrescentadas pelos vizinhos (só a administração do condomínio de origem vê)
+  let searchTags: string | null = null;
+  if (member.role === "admin" && !foreign) {
+    const { data: tg } = await supabase.from("providers").select("search_tags").eq("id", id).maybeSingle();
+    searchTags = (tg?.search_tags as string | null) ?? null;
+  }   // indicado em outro condomínio da região: sem bloco/unidade, sem ações de admin
   const adminHere = member.role === "admin" && !foreign;
   const { data: rs } = await supabase
     .from("reviews").select("*").eq("provider_id", id).eq("status", "visible").order("created_at", { ascending: false });
@@ -148,6 +154,7 @@ export default async function Prestador({
           <InviteChoices slug={slug} residentName={member.full_name} condoName={condo.name} region={region} />
         </div>
       ) : null}
+      {ligado && <p className="rounded-2xl bg-green-50 p-3 text-sm font-semibold text-green-700">Obrigado! Quem procurava esse serviço será avisado, e o perfil fica mais fácil de achar. 🎉</p>}
       {jaexiste && !reivindicar && <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-800">Este profissional já estava cadastrado. Que tal avaliá-lo?</p>}
       {askClaimHere && (
         <div className="space-y-2 rounded-2xl border-2 border-brand-500 bg-brand-50 p-3">
@@ -335,6 +342,14 @@ export default async function Prestador({
       </section>
       {adminHere && p.flagged && (
         <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-800">⚠️ Sinalizado: {p.flag_reason}</p>
+      )}
+      {adminHere && searchTags && (
+        <div className="space-y-2 rounded-xl bg-sky-soft p-3 text-sm">
+          <p><b>Palavras de busca acrescentadas por vizinhos:</b> {searchTags}</p>
+          <form action={adminClearSearchTags.bind(null, slug, p.id)}>
+            <button className="text-xs font-semibold text-red-700 underline">Limpar essas palavras</button>
+          </form>
+        </div>
       )}
     </div>
   );
