@@ -50,10 +50,10 @@ export default async function AdminPerfis({ params, searchParams }: { params: Pr
 
   let query = supabase.from("provider_listing").select("*", { count: "exact" }).in("condo_id", condoFilter ? [condoFilter] : condoIds);
   if (q) {
-    const digits = q.replace(/\D/g, "");
-    const text = q.replace(/[^\p{L}\p{N} ]/gu, " ").trim();   // sem vírgulas, parênteses ou coringas: a busca nunca vira filtro
-    const parts = [text ? `name.ilike.%${text}%` : "", digits.length >= 4 ? `whatsapp.ilike.%${digits}%` : ""].filter(Boolean);
-    if (parts.length) query = query.or(parts.join(","));
+    // Busca sem acento e com tolerância a erro de digitação (função do banco)
+    const { data: ids } = await supabase.rpc("find_provider_ids", { p_condos: condoFilter ? [condoFilter] : condoIds, p_q: q, p_limit: 50 });
+    const found = ((ids ?? []) as { id: string }[]).map((r) => r.id);
+    query = query.in("id", found.length ? found : ["00000000-0000-0000-0000-000000000000"]);
   }
   if (estado === "ativos") query = query.eq("status", "active");
   if (estado === "ocultos") query = query.eq("status", "hidden");

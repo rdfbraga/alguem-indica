@@ -36,12 +36,13 @@ export default async function Novo({
   const buscar = (sp.buscar ?? "").trim().slice(0, 60);
   let found: ProviderRow[] = [];
   if (wanted && buscar.length >= 2) {
-    const digits = buscar.replace(/\D/g, "");
-    const text = buscar.replace(/[^\p{L}\p{N} ]/gu, " ").trim();
-    const parts = [text ? `name.ilike.%${text}%` : "", digits.length >= 4 ? `whatsapp.ilike.%${digits}%` : ""].filter(Boolean);
-    if (parts.length) {
-      const { data: hits } = await supabase.from("provider_listing").select("*").in("condo_id", await getScope(condo.id)).eq("status", "active").or(parts.join(",")).limit(8);
-      found = (hits ?? []) as ProviderRow[];
+    // Busca sem acento e com tolerância a erro de digitação (função do banco; só traz perfis que a pessoa já pode ver)
+    const { data: ids } = await supabase.rpc("find_provider_ids", { p_condos: await getScope(condo.id), p_q: buscar, p_limit: 12 });
+    const order = ((ids ?? []) as { id: string }[]).map((r) => r.id);
+    if (order.length) {
+      const { data: hits } = await supabase.from("provider_listing").select("*").in("id", order).eq("status", "active");
+      const byId = new Map(((hits ?? []) as ProviderRow[]).map((p) => [p.id, p]));
+      found = order.map((id) => byId.get(id)).filter((p): p is ProviderRow => Boolean(p)).slice(0, 8);
     }
   }
   return (
