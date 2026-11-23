@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireMember } from "@/lib/condo";
 import { Logo } from "@/components/Logo";
+import { NewProviderFab } from "@/components/NewProviderFab";
 import { CondoSwitcher, type MyCondo } from "@/components/CondoSwitcher";
 import { getRegionInfo } from "@/lib/condo";
 import { signOut } from "../actions";
@@ -70,12 +71,7 @@ export default async function AppLayout({
         </div>
       </header>
       <main className="px-4 py-4">{children}</main>
-      <Link
-        href={`/c/${slug}/novo`}
-        className="btn fixed bottom-5 left-1/2 z-10 -translate-x-1/2 shadow-lg"
-      >
-        ＋ Indicar um profissional
-      </Link>
+      <NewProviderFab slug={slug} />
     </div>
   );
 }
