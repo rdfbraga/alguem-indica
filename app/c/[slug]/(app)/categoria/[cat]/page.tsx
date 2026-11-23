@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getFeatures, getScope, requireMember } from "@/lib/condo";
+import { getFeatures, getRegionInfo, getScope, requireMember } from "@/lib/condo";
 import type { Category, ProviderRow } from "@/lib/types";
 import { filterKind, parseKind, parseOrder, sortProviders } from "@/lib/listing";
 import { ProviderCard } from "@/components/ProviderCard";
 import { parseCondoKind } from "@/lib/condo-kind";
 import { ListControls } from "@/components/ListControls";
+import { HelpRequestButtons } from "@/components/HelpRequestButtons";
+import { RequestForm } from "@/components/RequestForm";
 import { SpecialtyChips } from "@/components/SpecialtyChips";
 import { filterBySpecialty, parseSpecialtyFilter, specialtyCounts, type Specialty } from "@/lib/specialties";
 
@@ -20,7 +22,7 @@ export default async function Categoria({
   const sp = await searchParams;
   const order = parseOrder(sp.ordem, false);
   const kind = parseKind(sp.tipo);
-  const { condo, supabase } = await requireMember(slug);
+  const { condo, member, supabase } = await requireMember(slug);
   const flags = await getFeatures(condo.id);
   const scope = await getScope(condo.id);
   const { data: category } = await supabase.from("categories").select("*").eq("slug", cat).maybeSingle();
@@ -62,9 +64,18 @@ export default async function Categoria({
         <p className="card text-center text-navy/70">Ninguém neste filtro. Tente ver “Todos”.</p>
       )}
       {all.length === 0 && (
-        <div className="card text-center text-navy/70">
-          Ainda não há indicações aqui.{" "}
-          <Link href={`/c/${slug}/novo`} className="font-semibold text-brand-700 underline">Seja o primeiro a indicar</Link>.
+        <div className="card space-y-4 text-center text-navy/70">
+          <p>
+            Ainda não há indicações aqui.{" "}
+            <Link href={`/c/${slug}/novo?servico=${encodeURIComponent(c.name.split(" / ")[0])}&cat=${encodeURIComponent(c.slug)}`} className="font-semibold text-brand-700 underline">Seja o primeiro a indicar</Link>.
+          </p>
+          <div className="mx-auto max-w-xs space-y-3 text-left">
+            <div className="space-y-1">
+              <div className="text-xs font-semibold text-navy/65">Pergunte aos vizinhos nos grupos de WhatsApp</div>
+              <HelpRequestButtons slug={slug} residentName={member.full_name} condoName={condo.name} what={c.name.split(" / ")[0]} region={await getRegionInfo(condo.id)} />
+            </div>
+            <RequestForm slug={slug} label={c.name.split(" / ")[0]} cta="🔔 Quero ser avisado por e-mail" />
+          </div>
         </div>
       )}
     </div>
