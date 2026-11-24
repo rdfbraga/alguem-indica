@@ -57,14 +57,16 @@ export default async function AppLayout({
     ]);
     newMessages = (count ?? 0) + (claimCount ?? 0) + (specCount ?? 0) + (flagged.count ?? 0) + (reports.count ?? 0) + (catCount.count ?? 0);
   }
+  const manyActions = [hasProfile || isProvider, member.role === "admin", !isProvider].filter(Boolean).length >= 3;
   return (
     <div className="mx-auto min-h-screen max-w-2xl pb-24">
-      <header className="sticky top-0 z-10 flex items-center justify-between border-b border-orange-100 bg-white/90 px-4 py-3 backdrop-blur">
+      <header className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-y-2 border-b border-orange-100 bg-white/90 px-4 py-3 backdrop-blur">
         <div className="min-w-0">
           <Logo href={`/c/${slug}`} />
           <CondoSwitcher current={{ slug, name: condo.name }} condos={myCondos.length ? myCondos : [{ slug, name: condo.name }]} regionSlug={region?.slug ?? null} />
         </div>
-        <div className="flex shrink-0 items-center gap-3 text-sm">
+        {/* Com 3 ou mais atalhos (ex.: administrador que também é prestador), eles vão para uma segunda linha para não cobrir o logo */}
+        <div className={`flex items-center gap-3 text-sm ${manyActions ? "w-full justify-between" : "shrink-0"}`}>
           {(hasProfile || isProvider) && (
             <Link href={`/c/${slug}/meu-perfil`} className="rounded-xl bg-brand-50 px-2.5 py-1 font-bold text-brand-700">🧰 Meu perfil</Link>
           )}
@@ -73,7 +75,7 @@ export default async function AppLayout({
               Admin{newMessages > 0 && <span className="ml-1 rounded-full bg-brand-500 px-1.5 text-xs text-white">{newMessages}</span>}
             </Link>
           )}
-          {!isProvider && <Link href={`/c/${slug}/ajuda`} className="flex items-center gap-1 whitespace-nowrap font-semibold text-navy/60 hover:text-navy" aria-label="Ajuda e contato">💬 <span className={hasProfile ? "hidden sm:inline" : ""}>Ajuda</span></Link>}
+          {!isProvider && <Link href={`/c/${slug}/ajuda`} className="flex items-center gap-1 whitespace-nowrap font-semibold text-navy/60 hover:text-navy" aria-label="Ajuda e contato">💬 <span className={hasProfile && !manyActions ? "hidden sm:inline" : ""}>Ajuda</span></Link>}
           <form action={signOut.bind(null, slug)}>
             <button className="font-semibold text-navy/60 hover:text-navy">Sair</button>
           </form>
