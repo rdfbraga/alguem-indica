@@ -18,6 +18,13 @@ export const getCondo = cache(async (slug: string): Promise<Condo> => {
   return condo;
 });
 
+/** Administrador da plataforma? (tem acesso de administração a todos os condomínios) */
+export const isPlatformAdmin = cache(async (): Promise<boolean> => {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("is_platform_admin");
+  return !error && data === true;
+});
+
 export const getUser = cache(async () => {
   const supabase = await createClient();
   const { data } = await supabase.auth.getUser();
@@ -38,6 +45,13 @@ export async function requireMember(slug: string, nextPath?: string) {
     .eq("condo_id", condo.id)
     .eq("user_id", user.id)
     .maybeSingle();
+  // Administrador da plataforma: entra como administrador de qualquer condomínio (mesmo que tenha saído da lista de administradores dele)
+  if ((member as Member | null)?.role !== "admin" && (await isPlatformAdmin())) {
+    const base = (member as Member | null) ?? ({
+      user_id: user.id, condo_id: condo.id, full_name: "Administração da plataforma", block: "Adm", unit: "0", role: "admin",
+    } as Member);
+    return { condo, user, member: { ...base, role: "admin" } as Member, supabase };
+  }
   if (!member) redirect(withNext(`/c/${slug}/cadastro`, slug, nextPath));
   return { condo, user, member: member as Member, supabase };
 }
