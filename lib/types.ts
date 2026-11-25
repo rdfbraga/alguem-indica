@@ -101,4 +101,8 @@ export type AdRow = {
   ends_on: string | null;
   active: boolean;
   created_at: string;
+  scope?: "condo" | "region";
+  placements?: string[];
+  category_ids?: number[];
+  keywords?: string | null;
 };

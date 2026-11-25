@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { notifyRequestMatches } from "@/lib/notify";
 import { createClient } from "@/lib/supabase/server";
-import { getCondo, getScope, getUser, requireAdmin, requireMember } from "@/lib/condo";
+import { getCondo, getScope, getUser, isPlatformAdmin, requireAdmin, requireMember } from "@/lib/condo";
 import { normalizeWhatsapp } from "@/lib/phone";
 import { normalizeInstagram, normalizeWebsite } from "@/lib/links";
 import type { FormState } from "@/lib/types";
@@ -602,12 +602,26 @@ export async function adminSaveAd(slug: string, adId: string | null, _: FormStat
   if (image_url && !image_url.includes("/ad-images/")) return { error: "Imagem inválida." };
   if ((starts_on && !DATE.test(starts_on)) || (ends_on && !DATE.test(ends_on))) return { error: "Datas inválidas." };
   if (starts_on && ends_on && ends_on < starts_on) return { error: "A data final deve ser depois da inicial." };
-  const row = { advertiser, title, body: body || null, cta_label: cta, link_url: link.value, whatsapp: wa, image_url, starts_on, ends_on };
+  const placements = fd.getAll("placement").map(String).filter((p): p is "home" | "category" | "search" => p === "home" || p === "category" || p === "search");
+  if (placements.length === 0) return { error: "Escolha pelo menos um lugar para o anúncio aparecer." };
+  const category_ids = parseCategoryIds(fd.getAll("category_id")).slice(0, 5);
+  const keywords = str(fd, "keywords").slice(0, 120);
+  if (placements.includes("search") && category_ids.length === 0 && !keywords) return { error: "Nos resultados de busca, escolha ao menos uma categoria ou uma palavra." };
+  const wantsRegion = fd.get("region") === "on";
+  const row = {
+    advertiser, title, body: body || null, cta_label: cta, link_url: link.value, whatsapp: wa, image_url, starts_on, ends_on,
+    placements, category_ids: placements.includes("category") || placements.includes("search") ? category_ids : [],
+    keywords: placements.includes("search") ? keywords || null : null,
+    ...(wantsRegion ? { scope: "region" } : adId && !(await isPlatformAdmin()) ? {} : { scope: "condo" }),
+  };
   const { error } = adId
     ? await supabase.from("ads").update(row).eq("id", adId).eq("condo_id", condo.id)
     : await supabase.from("ads").insert({ ...row, condo_id: condo.id, active: true });
   if (error) {
     console.error("adminSaveAd", error);
+    if (error.message?.includes("regiao_so_plataforma")) return { error: "Só o administrador da plataforma cria anúncio da região." };
+    if (error.message?.includes("sem_regiao")) return { error: "Este condomínio não está em uma região." };
+    if (error.message?.includes("busca_sem_alvo")) return { error: "Nos resultados de busca, escolha ao menos uma categoria ou uma palavra." };
     return { error: "Não foi possível salvar o anúncio." };
   }
   revalidatePath(`/c/${slug}`, "layout");

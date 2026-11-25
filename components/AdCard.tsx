@@ -7,7 +7,7 @@ export function AdCard({ slug, ad }: { slug: string; ad: AdRow }) {
     <aside className="card space-y-2 !border-navy/10" aria-label="Anúncio de parceiro do condomínio">
       <AdTracker adId={ad.id} />
       <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wide text-navy/50">
-        <span>Patrocinado · Parceiro do condomínio</span>
+        <span>{ad.scope === "region" ? "Patrocinado · Parceiro da região" : "Patrocinado · Parceiro do condomínio"}</span>
         <span className="normal-case">{ad.advertiser}</span>
       </div>
       <div className="flex gap-3">

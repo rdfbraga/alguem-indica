@@ -3,12 +3,23 @@ import { useActionState, useState } from "react";
 import { adminSaveAd } from "../../actions";
 import { PhotoField } from "@/components/PhotoField";
 import { formatWhatsapp } from "@/lib/phone";
-import type { AdRow, FormState } from "@/lib/types";
+import type { AdRow, Category, FormState } from "@/lib/types";
+import { CategoryPicker } from "@/components/CategoryPicker";
+import type { GroupLike, Section } from "@/lib/groups";
+import { PLACEMENT_LABEL, type AdPlacement } from "@/lib/ads";
 
 /** Cria ou edita um anúncio. Precisa de um link OU um WhatsApp para o botão. */
-export function AdForm({ slug, userId, ad }: { slug: string; userId: string; ad?: AdRow }) {
+export function AdForm({
+  slug, userId, ad, sections, canRegion, hasRegion,
+}: {
+  slug: string; userId: string; ad?: AdRow; sections: Section<GroupLike, Category>[]; canRegion: boolean; hasRegion: boolean;
+}) {
   const [state, action, pending] = useActionState<FormState, FormData>(adminSaveAd.bind(null, slug, ad?.id ?? null), undefined);
   const [busy, setBusy] = useState(false);
+  const [places, setPlaces] = useState<AdPlacement[]>((ad?.placements as AdPlacement[] | undefined) ?? ["home"]);
+  const [cats, setCats] = useState<number[]>(ad?.category_ids ?? []);
+  const usesTargets = places.includes("category") || places.includes("search");
+  const toggle = (p: AdPlacement) => setPlaces((cur) => (cur.includes(p) ? cur.filter((x) => x !== p) : [...cur, p]));
   return (
     <form action={action} className="space-y-3">
       <div className="grid gap-3 sm:grid-cols-2">
@@ -49,6 +60,37 @@ export function AdForm({ slug, userId, ad }: { slug: string; userId: string; ad?
           <input id="ad-end" type="date" name="ends_on" defaultValue={ad?.ends_on ?? ""} className="input" />
         </div>
       </div>
+      <fieldset className="space-y-2 rounded-2xl bg-sky-soft p-3">
+        <legend className="px-1 text-sm font-extrabold">Onde o anúncio aparece</legend>
+        {(Object.keys(PLACEMENT_LABEL) as AdPlacement[]).map((p) => (
+          <label key={p} className="flex items-center gap-2 text-sm font-semibold">
+            <input type="checkbox" name="placement" value={p} checked={places.includes(p)} onChange={() => toggle(p)} className="h-5 w-5" />
+            {PLACEMENT_LABEL[p]}
+          </label>
+        ))}
+        {usesTargets && (
+          <div className="space-y-2 border-t border-navy/10 pt-2">
+            <p className="text-xs text-navy/65">
+              <b>Categorias</b> (até 5): {places.includes("category") ? "dentro de categorias, sem escolher nenhuma o anúncio aparece em todas. " : ""}
+              {places.includes("search") ? "Nos resultados de busca, aparece quando a busca traz profissionais dessas categorias." : ""}
+            </p>
+            <CategoryPicker sections={sections} value={cats} onChange={setCats} max={5} />
+            {places.includes("search") && (
+              <div>
+                <label className="label !text-xs" htmlFor="ad-kw">Palavras da busca (opcional, separadas por vírgula)</label>
+                <input id="ad-kw" name="keywords" maxLength={120} defaultValue={ad?.keywords ?? ""} className="input !py-2" placeholder="fio, tomada, material elétrico" />
+                <p className="mt-1 text-xs text-navy/55">Na busca é preciso escolher ao menos uma categoria ou uma palavra.</p>
+              </div>
+            )}
+          </div>
+        )}
+      </fieldset>
+      {hasRegion && (
+        <label className={`flex items-start gap-2 rounded-2xl p-3 text-sm ${canRegion ? "bg-brand-50" : "bg-navy/5 opacity-70"}`}>
+          <input type="checkbox" name="region" disabled={!canRegion && ad?.scope !== "region"} defaultChecked={ad?.scope === "region"} className="mt-0.5 h-5 w-5" />
+          <span><b>🌎 Anúncio da região:</b> aparece em todos os condomínios da região, não só neste. {canRegion ? "" : "Só o administrador da plataforma cria."}</span>
+        </label>
+      )}
       <PhotoField userId={userId} bucket="ad-images" name="image_url" label="Imagem ou logo (opcional)" initialUrl={ad?.image_url ?? ""} onBusyChange={setBusy} />
       {state?.error && <p className="rounded-2xl bg-red-50 p-3 text-sm text-red-700">{state.error}</p>}
       {state?.ok && <p className="rounded-2xl bg-green-50 p-3 text-sm font-semibold text-green-700">{state.ok}</p>}

@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { getFeatures, getRegionInfo, getScope, requireMember } from "@/lib/condo";
+import { getFeatures, getRegionInfo, getScope, liveAds, requireMember } from "@/lib/condo";
+import { adsFor, pickAd } from "@/lib/ads";
 import type { Category, CategoryGroup, ProviderRow } from "@/lib/types";
 import { groupCategories } from "@/lib/groups";
 import { filterKind, parseKind, parseOrder, sortProviders } from "@/lib/listing";
@@ -65,6 +66,12 @@ export default async function Home({
       const { data } = await supabase.from("provider_listing").select("*").in("id", [...scores.keys()]);
       results = sortProviders(filterKind((data ?? []) as ProviderRow[], kind), order, scores, condo.id);
     }
+    // Anúncio da busca: casa pelas categorias dos resultados ou pelas palavras digitadas
+    let searchAd: AdRow | null = null;
+    if (flags.ads) {
+      const catIds = [...new Set(results.slice(0, 10).flatMap((p) => p.category_ids ?? []))];
+      searchAd = pickAd(adsFor(await liveAds(condo.id, scope), "search", { categoryIds: catIds, query: q }));
+    }
     // Busca sem resultado: registra para o bloco "Os vizinhos estão procurando" (só aparece quando 2 pessoas buscam o mesmo)
     if (results.length === 0 && q.length >= 3) {
       await supabase.rpc("log_search_miss", { p_condo: condo.id, p_q: q });   // na hora: o app nunca depende do que roda depois da resposta
@@ -72,6 +79,7 @@ export default async function Home({
     return (
       <div className="space-y-4">
         <SearchBox slug={slug} q={q} suggestions={suggestions} />
+        {searchAd && <AdCard slug={slug} ad={searchAd} />}
         <h2 className="font-extrabold">{results.length} resultado(s) para “{q}”</h2>
         <ListControls base={`/c/${slug}`} q={q} order={order} kind={kind} orders={["relevancia", "melhores", "avaliados", "recentes"]} />
         {results.map((p) => <ProviderCard key={p.id} slug={slug} p={p} planBadge={flags.plans} viewerCondoId={condo.id} kind={parseCondoKind(condo.kind)} />)}
@@ -118,13 +126,9 @@ export default async function Home({
   const topIds = new Set(topRated.map((p) => p.id));
   const newest = providers.filter((p) => !topIds.has(p.id)).slice(0, 5);
 
-  // Anúncio local (só com a chave ligada): sorteia um dos vigentes a cada visita.
+  // Anúncio local (só com a chave ligada): sorteia um dos vigentes para a tela inicial a cada visita.
   let ad: AdRow | null = null;
-  if (flags.ads) {
-    const { data: adsData } = await supabase.from("ads").select("*").eq("condo_id", condo.id).eq("active", true).limit(20);
-    const live = ((adsData ?? []) as AdRow[]).filter((a) => adIsLive(a, todayInSaoPaulo()));
-    ad = live.length ? live[Math.floor(Math.random() * live.length)] : null;
-  }
+  if (flags.ads) ad = pickAd(adsFor(await liveAds(condo.id, scope), "home"));
 
   // "Como foi?": quem o morador chamou há 1 a 14 dias e ainda não avaliou (ignora a falta da migration 0020)
   const { data: promptData } = await supabase.rpc("review_prompts", { p_condo: condo.id });

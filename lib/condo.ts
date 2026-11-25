@@ -90,3 +90,14 @@ export const getRegionInfo = cache(async (condoId: string): Promise<{ slug: stri
   const row = Array.isArray(data) ? (data[0] as { slug: string; name: string } | undefined) : undefined;
   return row ?? null;
 });
+
+/** Anúncios vigentes que o morador pode ver aqui: os do condomínio e os da região (nunca os de outro condomínio). */
+export async function liveAds(condoId: string, scope: string[]): Promise<import("@/lib/types").AdRow[]> {
+  const supabase = await createClient();
+  const { data } = await supabase.from("ads").select("*").in("condo_id", scope).eq("active", true).limit(60);
+  const { adIsLive, todayInSaoPaulo } = await import("@/lib/features");
+  const today = todayInSaoPaulo();
+  return ((data ?? []) as import("@/lib/types").AdRow[]).filter(
+    (a) => adIsLive(a, today) && (a.scope === "region" || a.condo_id === condoId),
+  );
+}

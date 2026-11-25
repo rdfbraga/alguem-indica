@@ -1,5 +1,8 @@
 import Link from "next/link";
-import { getFeatures, requireAdmin } from "@/lib/condo";
+import { getFeatures, getRegionInfo, isPlatformAdmin, requireAdmin } from "@/lib/condo";
+import type { Category, CategoryGroup } from "@/lib/types";
+import { groupCategories } from "@/lib/groups";
+import { PLACEMENT_LABEL, type AdPlacement } from "@/lib/ads";
 import { FEATURES, FEATURE_INFO } from "@/lib/features";
 import type { AdRow } from "@/lib/types";
 import { AdForm } from "../AdForm";
@@ -21,6 +24,14 @@ export default async function AdminConfigurar({
   const { data: adsData } = await supabase.from("ads").select("*").eq("condo_id", condo.id).order("created_at", { ascending: false });
   const ads = (adsData ?? []) as AdRow[];
   const editingAd = sp.anuncio ? ads.find((a) => a.id === sp.anuncio) : undefined;
+  // Para os anúncios por categoria e da região
+  const [{ data: catData }, { data: groupData }] = await Promise.all([
+    supabase.from("categories").select("*").order("sort"),
+    supabase.from("category_groups").select("id,slug,name,icon").order("sort"),
+  ]);
+  const adSections = groupCategories((groupData ?? []) as CategoryGroup[], ((catData ?? []) as Category[]).filter((c) => c.slug !== "outros"));
+  const canRegion = await isPlatformAdmin();
+  const hasRegion = Boolean(await getRegionInfo(condo.id));
 
   return (
     <div className="space-y-8">
@@ -76,6 +87,10 @@ export default async function AdminConfigurar({
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <div className="font-extrabold">{a.title}</div>
+                    <div className="mb-0.5 flex flex-wrap gap-1 text-[11px] font-bold">
+                      {a.scope === "region" && <span className="rounded-full bg-brand-50 px-2 py-0.5 text-brand-700">🌎 Região</span>}
+                      {((a.placements ?? ["home"]) as AdPlacement[]).map((p) => <span key={p} className="rounded-full bg-sky-soft px-2 py-0.5 text-sky-brand">{PLACEMENT_LABEL[p]}</span>)}
+                    </div>
                     <div className="text-navy/65">{a.advertiser}{a.starts_on || a.ends_on ? ` · ${a.starts_on ? new Date(a.starts_on + "T12:00:00").toLocaleDateString("pt-BR") : "…"} a ${a.ends_on ? new Date(a.ends_on + "T12:00:00").toLocaleDateString("pt-BR") : "sem fim"}` : ""}</div>
                   </div>
                   <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-bold ${a.active ? "bg-green-50 text-green-700" : "bg-navy/10 text-navy/60"}`}>{a.active ? "Ativo" : "Pausado"}</span>
@@ -90,7 +105,7 @@ export default async function AdminConfigurar({
           })}
           <details className="card !p-3" open={Boolean(editingAd)}>
             <summary className="cursor-pointer font-bold text-sky-brand">{editingAd ? `✏️ Editando: ${editingAd.title}` : "＋ Novo anúncio"}</summary>
-            <div className="mt-3"><AdForm key={editingAd?.id ?? "novo"} slug={slug} userId={user.id} ad={editingAd} /></div>
+            <div className="mt-3"><AdForm key={editingAd?.id ?? "novo"} slug={slug} userId={user.id} ad={editingAd} sections={adSections} canRegion={canRegion} hasRegion={hasRegion} /></div>
           </details>
         </section>
       )}

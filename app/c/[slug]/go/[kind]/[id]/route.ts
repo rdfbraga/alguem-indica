@@ -26,8 +26,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
   if (kind === "ad") {
     // Anúncio: só se a chave estiver ligada e o anúncio vigente (o banco aplica isso via RLS e na função de registro).
-    const { data: ad } = await supabase.from("ads").select("advertiser,title,link_url,whatsapp,active").eq("id", id).eq("condo_id", condo.id).maybeSingle();
-    if (!ad || !ad.active || !(await getFeatures(condo.id)).ads) return back(`/c/${slug}`);
+    const { data: ad } = await supabase.from("ads").select("advertiser,title,link_url,whatsapp,active,scope,condo_id").eq("id", id).in("condo_id", await getScope(condo.id)).maybeSingle();
+    if (!ad || !ad.active || (ad.scope !== "region" && ad.condo_id !== condo.id) || !(await getFeatures(condo.id)).ads) return back(`/c/${slug}`);
     let adTarget: string | null = null;
     if (ad.link_url && /^https?:\/\//i.test(ad.link_url)) {
       adTarget = ad.link_url;

@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getFeatures, getRegionInfo, getScope, requireMember } from "@/lib/condo";
+import { getFeatures, getRegionInfo, getScope, liveAds, requireMember } from "@/lib/condo";
+import { adsFor, pickAd } from "@/lib/ads";
+import { AdCard } from "@/components/AdCard";
 import type { Category, ProviderRow } from "@/lib/types";
 import { filterKind, parseKind, parseOrder, sortProviders } from "@/lib/listing";
 import { ProviderCard } from "@/components/ProviderCard";
@@ -45,6 +47,8 @@ export default async function Categoria({
   const { data: specData } = await supabase.from("specialties").select("id,category_id,slug,name").eq("category_id", c.id);
   // Categoria sem nenhum prestador na região: conta como "procura sem oferta" (aparece em "Os vizinhos estão procurando").
   if (all.length === 0) await supabase.rpc("log_search_miss", { p_condo: condo.id, p_q: c.name.split(" / ")[0] });
+  // Anúncio da categoria (só com a chave ligada)
+  const categoryAd = flags.ads ? pickAd(adsFor(await liveAds(condo.id, scope), "category", { categoryIds: [c.id] })) : null;
   const specOptions = specialtyCounts(all, (specData ?? []) as Specialty[]);
   const esp = parseSpecialtyFilter(sp.esp, specOptions);
   const providers = sortProviders(filterBySpecialty(filterKind(all, kind), esp), order, undefined, condo.id);
@@ -53,6 +57,7 @@ export default async function Categoria({
     <div className="space-y-3">
       <Link href={`/c/${slug}`} className="text-sm text-navy/60">← Categorias</Link>
       <h1 className="text-xl font-bold">{c.icon} {c.name}</h1>
+      {categoryAd && <AdCard slug={slug} ad={categoryAd} />}
       {specOptions.length > 0 && (
         <SpecialtyChips base={`/c/${slug}/categoria/${cat}`} options={specOptions} current={esp} total={all.length} keep={keep} />
       )}
