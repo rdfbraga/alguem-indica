@@ -36,7 +36,10 @@ export function PlanCard({
       {isOwner && (
         <div className="space-y-2 text-sm">
           {state.kind === "active" ? (
-            <p>Seu plano está ativo: restam <b>{state.daysLeft} {state.daysLeft === 1 ? "dia" : "dias"}</b>. Use a vitrine, a galeria de fotos e as respostas às avaliações.</p>
+            <>
+              <p>Seu plano está ativo: restam <b>{state.daysLeft} {state.daysLeft === 1 ? "dia" : "dias"}</b>. Use a vitrine, a galeria de fotos e as respostas às avaliações.</p>
+              <Link className="font-bold text-sky-brand underline" href={`/c/${slug}/assinar/${provider.id}`}>{state.trial ? "Assinar para continuar depois do teste" : "Renovar o plano"}</Link>
+            </>
           ) : (
             <>
               <p>Com o plano Destaque você ganha:</p>
@@ -51,10 +54,11 @@ export function PlanCard({
                   <button className="btn !px-4 !py-2 !text-sm">Testar 30 dias grátis</button>
                 </form>
               ) : (
-                <p>
-                  {state.kind === "expired" ? <>Seu teste terminou em {fmt(state.endedAt)}. </> : null}
-                  <Link className="font-bold underline" href={askAdmin}>Falar com a administração para continuar</Link>
-                </p>
+                <div className="space-y-2">
+                  {state.kind === "expired" ? <p>Seu plano terminou em {fmt(state.endedAt)}.</p> : null}
+                  <Link className="btn !px-4 !py-2 !text-sm" href={`/c/${slug}/assinar/${provider.id}`}>⭐ Assinar o plano Destaque</Link>
+                  <p className="text-xs text-navy/60">Dúvidas? <Link className="font-bold underline" href={askAdmin}>Fale com a administração</Link>.</p>
+                </div>
               )}
             </>
           )}

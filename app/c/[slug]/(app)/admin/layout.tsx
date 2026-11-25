@@ -21,7 +21,8 @@ export default async function AdminLayout({
     supabase.from("providers").select("id", head).eq("condo_id", condo.id).not("custom_specialty", "is", null).eq("custom_specialty_reviewed", false),
   ]);
   const { data: reqData } = await supabase.rpc("admin_pending_requests", { p_condo: condo.id });
-  const pending = [fb, claims, flagged, reports, cat, spec].reduce((n, r) => n + (r.count ?? 0), 0) + (Array.isArray(reqData) ? reqData.length : 0);
+  const { data: payData } = await supabase.rpc("admin_pending_payments", { p_condo: condo.id });
+  const pending = [fb, claims, flagged, reports, cat, spec].reduce((n, r) => n + (r.count ?? 0), 0) + (Array.isArray(reqData) ? reqData.length : 0) + (Array.isArray(payData) ? payData.length : 0);
   // Quem administra mais de um condomínio ganha a aba "Condomínios" (se a migration 0022 ainda não rodou, a aba não aparece).
   const { data: ov } = await supabase.rpc("admin_overview");
   const rows = ((ov ?? []) as { condo_id: string; pend_feedback: number; pend_claims: number; pend_flagged: number; pend_reports: number; pend_categories: number; pend_specialties: number }[]);

@@ -21,7 +21,7 @@ export default async function AppLayout({
   const isProvider = member.role === "provider";
   if (isProvider) {
     const path = ((await headers()).get("x-next-path") ?? "").split("?")[0];
-    const ok = new RegExp(`^/c/${slug}/(meu-perfil|resultados)$|^/c/${slug}/p/[0-9a-f-]{36}$`).test(path);
+    const ok = new RegExp(`^/c/${slug}/(meu-perfil|resultados)$|^/c/${slug}/(p|assinar)/[0-9a-f-]{36}$`).test(path);
     if (!ok) redirect(`/c/${slug}/meu-perfil`);
   }
   // Troca de condomínio: os condomínios da pessoa e, se houver região, o caminho para entrar em outro (ignora a falta da migration 0032)

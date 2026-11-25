@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { getScope, requireMember } from "@/lib/condo";
+import { getFeatures, getScope, requireMember } from "@/lib/condo";
+import { planState, type PlanRow } from "@/lib/features";
 import type { ProviderRow } from "@/lib/types";
 import type { ProviderStats } from "@/lib/stats";
 import { providerCategoryLabels } from "@/lib/categories";
@@ -32,6 +33,13 @@ export default async function MeuPerfil({ params }: { params: Promise<{ slug: st
     .order("created_at");
   const profiles = (data ?? []) as ProviderRow[];
 
+  // Plano Destaque (só aparece com a chave ligada)
+  const flags = await getFeatures(condo.id);
+  const planByProvider = new Map<string, PlanRow>();
+  if (flags.plans && profiles.length) {
+    const { data: pl } = await supabase.from("provider_plans").select("*").in("provider_id", profiles.map((p) => p.id));
+    for (const r of (pl ?? []) as PlanRow[]) planByProvider.set((r as PlanRow & { provider_id: string }).provider_id, r);
+  }
   // Pedidos para assumir ainda em análise (que ainda não viraram perfil seu)
   const { data: claimRows } = await supabase.from("profile_claims").select("provider_id").eq("user_id", user.id).eq("status", "pending");
   const claimIds = ((claimRows ?? []) as { provider_id: string }[]).map((c) => c.provider_id).filter((id) => !profiles.some((p) => p.id === id));
@@ -92,6 +100,19 @@ export default async function MeuPerfil({ params }: { params: Promise<{ slug: st
               </div>
             </div>
             {!confirmed && <p className="text-xs text-navy/60">Os números aparecem depois que a administração confirmar que o perfil é seu.</p>}
+
+            {flags.plans && confirmed && (() => {
+              const st = planState(planByProvider.get(p.id) ?? null);
+              return (
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-brand-50 p-3 text-sm">
+                  <span>
+                    <b>⭐ Plano Destaque:</b>{" "}
+                    {st.kind === "active" ? `${st.trial ? "teste grátis" : "ativo"} até ${new Date(st.endsAt).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })}` : st.kind === "expired" ? "encerrado" : "não ativo"}
+                  </span>
+                  <Link href={`/c/${slug}/assinar/${p.id}`} className="font-bold text-sky-brand underline">{st.kind === "active" ? "Renovar" : "Ver o plano"}</Link>
+                </div>
+              );
+            })()}
 
             {hints.length > 0 && (
               <div className="rounded-2xl bg-amber-50 p-3 text-sm text-amber-900">

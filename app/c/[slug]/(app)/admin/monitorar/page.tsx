@@ -3,6 +3,7 @@ import { getFeatures, requireAdmin } from "@/lib/condo";
 import { StatTile } from "@/components/StatTile";
 import { BarChart } from "@/components/BarChart";
 import { blockText, parseCondoKind, placeLabels } from "@/lib/condo-kind";
+import { formatBRL } from "@/lib/billing";
 import { PERIODS, delta, parsePeriod } from "@/lib/stats";
 import type { AdRow } from "@/lib/types";
 
@@ -62,6 +63,8 @@ export default async function AdminMonitorar({
   const g = (gs ?? null) as Growth | null;
   const overview = (cs ?? null) as CondoStats | null;
 
+  const { data: sumData } = await supabase.rpc("admin_payment_summary", { p_condo: condo.id, p_days: days });
+  const revenue = (Array.isArray(sumData) ? sumData[0] : null) as { payments: number; total_cents: number } | null;
   const { data: planRows } = await supabase
     .from("provider_plans").select("provider_id,current_period_end,source")
     .eq("condo_id", condo.id).gt("current_period_end", new Date().toISOString()).order("current_period_end");
@@ -184,6 +187,9 @@ export default async function AdminMonitorar({
       {(flags.plans || (planRows ?? []).length > 0) && (
         <section className="space-y-3">
           <h2 className="font-semibold">⭐ Planos Destaque ativos ({(planRows ?? []).length})</h2>
+          {revenue && (
+            <p className="text-sm text-navy/70">Pagamentos confirmados nos últimos {days} dias: <b>{formatBRL(Number(revenue.total_cents))}</b> ({Number(revenue.payments)} {Number(revenue.payments) === 1 ? "pagamento" : "pagamentos"}).</p>
+          )}
           {(planRows ?? []).map((r) => (
             <div key={r.provider_id} className="card flex items-center justify-between gap-2 !p-3 text-sm">
               <Link className="min-w-0 truncate font-bold underline" href={`/c/${slug}/p/${r.provider_id}`}>{planNames.find((n) => n.id === r.provider_id)?.name ?? "Perfil"}</Link>

@@ -1,6 +1,6 @@
 "use client";
 import { useActionState } from "react";
-import { platformAddAdminByEmail, platformCreateCondo, platformSaveRegion, platformSetAutoApprove, platformUpdateCondo } from "../../../actions";
+import { platformAddAdminByEmail, platformCreateCondo, platformSaveBilling, platformSaveRegion, platformSetAutoApprove, platformUpdateCondo } from "../../../actions";
 import type { FormState } from "@/lib/types";
 import { KIND_LABEL, type CondoKind } from "@/lib/condo-kind";
 
@@ -151,6 +151,45 @@ export function AutoApproveForm({ slug, condoId, until }: { slug: string; condoI
         {active && <button disabled={pending} name="off" value="1" formNoValidate className="text-sm font-semibold text-red-700 underline">Desligar</button>}
       </div>
       <Feedback state={state} />
+    </form>
+  );
+}
+
+/** Cobrança do plano Destaque por Pix: valor, desconto do trimestre, chave Pix e WhatsApp para a confirmação. */
+export function BillingForm({
+  slug, initial,
+}: {
+  slug: string;
+  initial: { price: string; discount: number; pixKey: string; pixHolder: string; whatsapp: string };
+}) {
+  const [state, action, pending] = useActionState<FormState, FormData>(platformSaveBilling.bind(null, slug), undefined);
+  return (
+    <form action={action} className="space-y-2">
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <label className="label !text-xs" htmlFor="bl-price">Valor por mês (R$)</label>
+          <input id="bl-price" name="price" required inputMode="decimal" defaultValue={initial.price} className="input !py-2" placeholder="29,00" />
+        </div>
+        <div>
+          <label className="label !text-xs" htmlFor="bl-disc">Desconto no trimestre (%)</label>
+          <input id="bl-disc" name="discount" required inputMode="numeric" defaultValue={initial.discount} className="input !py-2" placeholder="15" />
+        </div>
+      </div>
+      <div>
+        <label className="label !text-xs" htmlFor="bl-pix">Chave Pix</label>
+        <input id="bl-pix" name="pix_key" maxLength={120} defaultValue={initial.pixKey} className="input !py-2" placeholder="CPF, e-mail, telefone ou chave aleatória" />
+      </div>
+      <div>
+        <label className="label !text-xs" htmlFor="bl-holder">Nome do titular (aparece para quem vai pagar)</label>
+        <input id="bl-holder" name="pix_holder" maxLength={80} defaultValue={initial.pixHolder} className="input !py-2" />
+      </div>
+      <div>
+        <label className="label !text-xs" htmlFor="bl-wa">WhatsApp para receber o aviso de pagamento</label>
+        <input id="bl-wa" name="whatsapp" inputMode="tel" defaultValue={initial.whatsapp} className="input !py-2" placeholder="(11) 99999-8888" />
+      </div>
+      <p className="text-xs text-navy/55">Enquanto a chave Pix estiver vazia, os prestadores veem "fale com a administração" no lugar do pagamento.</p>
+      <Feedback state={state} />
+      <button disabled={pending} className="btn !px-4 !py-2 !text-sm">{pending ? "Salvando…" : "Salvar cobrança"}</button>
     </form>
   );
 }

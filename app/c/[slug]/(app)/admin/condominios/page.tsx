@@ -2,9 +2,10 @@ import Link from "next/link";
 import { requireAdmin } from "@/lib/condo";
 import { StatTile } from "@/components/StatTile";
 import { naturalCompare } from "@/lib/natural";
+import { formatWhatsapp } from "@/lib/phone";
 import { KIND_LABEL, parseCondoKind } from "@/lib/condo-kind";
 import { platformDeleteRegion, platformSetAdmin } from "../../../actions";
-import { AddAdminByEmailForm, AutoApproveForm, EditCondoForm, NewCondoForm, RegionForm } from "./PlatformForms";
+import { AddAdminByEmailForm, AutoApproveForm, BillingForm, EditCondoForm, NewCondoForm, RegionForm } from "./PlatformForms";
 
 export const metadata = { title: "Condomínios — Admin" };
 
@@ -19,6 +20,7 @@ const pending = (r: Row) => n(r.pend_feedback) + n(r.pend_claims) + n(r.pend_fla
 
 type PCondo = { kind?: string; auto_approve_until?: string | null; id: string; slug: string; name: string; is_active: boolean; region_id: string | null; region_name: string | null; members: number; providers: number; admins: number };
 type Person = { user_id: string; full_name: string; block: string; unit: string; email: string };
+type BillingInfo = { price_cents: number; quarter_discount_pct: number; pix_key: string; pix_holder: string; billing_whatsapp: string };
 type PRegion = { id: string; slug: string; name: string; condos: number };
 
 export default async function AdminCondominios({
@@ -39,11 +41,14 @@ export default async function AdminCondominios({
   let pCondos: PCondo[] = [];
   let pRegions: PRegion[] = [];
   const adminsByCondo = new Map<string, Person[]>();
+  let billing = null as BillingInfo | null;
   let found: Person[] = [];
   if (platform?.is_admin) {
     const [c, r] = await Promise.all([supabase.rpc("platform_condos"), supabase.rpc("platform_regions")]);
     pCondos = ((c.data ?? []) as PCondo[]).sort((a, b) => naturalCompare(a.name, b.name));
     pRegions = (r.data ?? []) as PRegion[];
+    const { data: bi } = await supabase.rpc("billing_info");
+    billing = (bi ?? null) as BillingInfo | null;
     const lists = await Promise.all(pCondos.map((c) => supabase.rpc("platform_condo_admins", { p_condo: c.id })));
     pCondos.forEach((c, i) => adminsByCondo.set(c.id, ((lists[i].data ?? []) as Person[])));
     const target = pCondos.find((c) => c.id === adm);
@@ -91,6 +96,19 @@ export default async function AdminCondominios({
           <details className="card !p-3">
             <summary className="cursor-pointer font-bold text-sky-brand">＋ Novo condomínio</summary>
             <div className="mt-3"><NewCondoForm slug={slug} regions={pRegions.map((r) => ({ id: r.id, name: r.name }))} /></div>
+          </details>
+
+          <details className="card !p-3">
+            <summary className="cursor-pointer font-bold text-sky-brand">💳 Cobrança do plano Destaque</summary>
+            <div className="mt-3">
+              <BillingForm slug={slug} initial={{
+                price: ((billing?.price_cents ?? 2900) / 100).toFixed(2).replace(".", ","),
+                discount: billing?.quarter_discount_pct ?? 15,
+                pixKey: billing?.pix_key ?? "",
+                pixHolder: billing?.pix_holder ?? "",
+                whatsapp: billing?.billing_whatsapp ? formatWhatsapp(billing.billing_whatsapp) : "",
+              }} />
+            </div>
           </details>
 
           <div className="space-y-2">

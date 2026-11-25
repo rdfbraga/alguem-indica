@@ -14,6 +14,7 @@ import { MAX_CATEGORIES, parseCategoryIds } from "@/lib/categories";
 import { FEATURES } from "@/lib/features";
 import { condoNext } from "@/lib/next-path";
 import { MAX_SPECIALTIES } from "@/lib/specialties";
+import { parseBRL } from "@/lib/billing";
 import { parseCondoKind, placeLabels } from "@/lib/condo-kind";
 
 const str = (fd: FormData, k: string) => String(fd.get(k) ?? "").trim();
@@ -460,6 +461,41 @@ export async function adminGrantPlan(slug: string, providerId: string, fd: FormD
   if (!UUID.test(providerId) || !Number.isInteger(days) || days < 1 || days > 366) return;
   await supabase.rpc("grant_plan", { p_provider: providerId, p_days: days, p_note: str(fd, "note").slice(0, 200) || null });
   revalidatePath(`/c/${slug}`, "layout");
+}
+
+// ─── Cobrança do plano (Pix manual) ───
+export async function requestPlanPayment(slug: string, providerId: string, months: number) {
+  const { supabase } = await requireMember(slug);
+  if (!UUID.test(providerId) || (months !== 1 && months !== 3)) redirect(`/c/${slug}`);
+  const { error } = await supabase.rpc("request_plan_payment", { p_provider: providerId, p_months: months });
+  if (error) console.error("request_plan_payment", error.message);
+  revalidatePath(`/c/${slug}`, "layout");
+  redirect(`/c/${slug}/assinar/${providerId}${error ? "?erro=1" : ""}`);
+}
+
+export async function adminDecidePayment(slug: string, id: string, confirm: boolean) {
+  const { condo, supabase } = await requireAdmin(slug);
+  if (!UUID.test(id)) return;
+  await supabase.rpc("admin_decide_payment", { p_condo: condo.id, p_id: id, p_confirm: confirm });
+  revalidatePath(`/c/${slug}`, "layout");
+}
+
+export async function platformSaveBilling(slug: string, _: FormState, fd: FormData): Promise<FormState> {
+  const { supabase } = await requireAdmin(slug);
+  const price = parseBRL(str(fd, "price"));
+  const discount = Number(str(fd, "discount"));
+  if (price === null || price < 100 || price > 100000) return { error: "Informe um valor mensal entre R$ 1,00 e R$ 1.000,00." };
+  if (!Number.isInteger(discount) || discount < 0 || discount > 50) return { error: "O desconto do trimestre deve ir de 0 a 50%." };
+  const { error } = await supabase.rpc("platform_set_billing", {
+    p_price_cents: price, p_discount_pct: discount, p_pix_key: str(fd, "pix_key"), p_pix_holder: str(fd, "pix_holder"), p_whatsapp: str(fd, "whatsapp").replace(/\D/g, "") ? normalizeWhatsapp(str(fd, "whatsapp")) ?? "invalido" : "",
+  });
+  if (error) {
+    if (error.message?.includes("whatsapp_invalido") ) return { error: "WhatsApp inválido. Use o formato (11) 99999-8888." };
+    console.error("platformSaveBilling", error.message);
+    return { error: platformError(error.message, "Não foi possível salvar.") };
+  }
+  revalidatePath(`/c/${slug}`, "layout");
+  return { ok: "Cobrança atualizada!" };
 }
 
 export async function adminCancelPlan(slug: string, providerId: string) {

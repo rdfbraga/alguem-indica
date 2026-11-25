@@ -4,6 +4,7 @@ import { blockText, parseCondoKind, placeText } from "@/lib/condo-kind";
 import type { Category, CategoryGroup, FeedbackRow, ProfileClaimRow, ProviderRow, ReviewRow } from "@/lib/types";
 import { FlaggedList } from "./FlaggedList";
 import { formatWhatsapp } from "@/lib/phone";
+import { formatBRL, planMonthsLabel } from "@/lib/billing";
 import { KIND_BY_VALUE } from "@/lib/feedback";
 import { groupCategories } from "@/lib/groups";
 import { capitalizeFirst, findSimilarCategories, groupSuggestions } from "@/lib/suggestions";
@@ -16,6 +17,7 @@ import {
   adminCreateCategory,
   adminDismissSuggestion,
   adminDecideRequest,
+  adminDecidePayment,
   adminHideRequest,
   adminMoveToCategory,
   adminResolveReport,
@@ -37,6 +39,8 @@ export default async function AdminModerar({ params }: { params: Promise<{ slug:
   const { slug } = await params;
   const { condo, supabase } = await requireAdmin(slug);
 
+  const { data: payData } = await supabase.rpc("admin_pending_payments", { p_condo: condo.id });
+  const pendingPayments = (payData ?? []) as { id: string; provider_id: string; provider_name: string; months: number; amount_cents: number; created_at: string }[];
   const { data: pendReq } = await supabase.rpc("admin_pending_requests", { p_condo: condo.id });
   const pendingRequests = (pendReq ?? []) as { id: string; label: string; flag_reason: string | null }[];
   const { data: hiddenData } = await supabase.rpc("admin_hidden_requests", { p_condo: condo.id });
@@ -132,6 +136,26 @@ export default async function AdminModerar({ params }: { params: Promise<{ slug:
         })}
         {claims.length === 0 && <p className="text-sm text-navy/60">Nenhum pedido pendente.</p>}
       </section>
+
+      {pendingPayments.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="font-semibold">💳 Pagamentos do plano para confirmar ({pendingPayments.length})</h2>
+          <p className="text-sm text-navy/65">Confira o Pix na sua conta antes de confirmar. Ao confirmar, o plano é liberado.</p>
+          {pendingPayments.map((pm) => (
+            <div key={pm.id} className="card space-y-2">
+              <p>
+                <Link className="font-bold underline" href={`/c/${slug}/p/${pm.provider_id}`}>{pm.provider_name}</Link>
+                {" "}· {planMonthsLabel(pm.months)} · <b>{formatBRL(pm.amount_cents)}</b>
+              </p>
+              <p className="text-xs text-navy/55">Pedido em {new Date(pm.created_at).toLocaleString("pt-BR")}</p>
+              <div className="flex gap-2">
+                <form action={adminDecidePayment.bind(null, slug, pm.id, true)}><button className="btn !px-3 !py-2 !text-sm">Pagamento recebido</button></form>
+                <form action={adminDecidePayment.bind(null, slug, pm.id, false)}><button className="btn-secondary !px-3 !py-2 !text-sm">Recusar</button></form>
+              </div>
+            </div>
+          ))}
+        </section>
+      )}
 
       {pendingRequests.length > 0 && (
         <section className="space-y-3">
