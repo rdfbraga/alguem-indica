@@ -11,12 +11,15 @@ export function PlanCard({
   plan,
   isOwner,
   isAdmin,
+  canManage = false,
 }: {
   slug: string;
   provider: { id: string; name: string };
   plan: PlanRow | null;
   isOwner: boolean;
   isAdmin: boolean;
+  /** Administrador da plataforma: só ele concede ou cancela plano. */
+  canManage?: boolean;
 }) {
   const state = planState(plan);
   const askAdmin = `/c/${slug}/ajuda?tipo=suporte&msg=${encodeURIComponent(`Quero continuar com o plano Destaque no perfil "${provider.name}".`)}`;
@@ -65,7 +68,7 @@ export function PlanCard({
         </div>
       )}
 
-      {isAdmin && (
+      {isAdmin && canManage && (
         <div className="space-y-2 border-t border-brand-100 pt-3 text-sm">
           <div className="font-bold text-navy/70">Administração</div>
           {plan?.note ? <p className="text-xs text-navy/60">Obs.: {plan.note}</p> : null}

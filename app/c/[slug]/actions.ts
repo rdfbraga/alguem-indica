@@ -16,6 +16,8 @@ import { condoNext } from "@/lib/next-path";
 import { MAX_SPECIALTIES } from "@/lib/specialties";
 import { parseBRL } from "@/lib/billing";
 import { parseCondoKind, placeLabels } from "@/lib/condo-kind";
+import { isStorageImageUrl, storagePathFromUrl } from "@/lib/photo";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 const str = (fd: FormData, k: string) => String(fd.get(k) ?? "").trim();
 
@@ -36,7 +38,7 @@ export async function completeOnboarding(slug: string, _: FormState, fd: FormDat
   // 23505 = já era morador (ex.: clique duplo): segue normalmente.
   if (error && error.code !== "23505") {
     console.error("completeOnboarding", error);
-    return { error: `Não foi possível concluir o cadastro (${error.code ?? "erro"}: ${error.message}).` };
+    return { error: `Não foi possível concluir o cadastro (código ${error.code ?? "erro"}). Tente de novo.` };
   }
   // Quem diz que também presta serviço vai direto ao cadastro do próprio perfil.
   redirect(fd.get("offers_service") === "on" ? `/c/${slug}/novo?eu=1` : condoNext(slug, str(fd, "next")));
@@ -83,7 +85,7 @@ export async function createProvider(slug: string, _: FormState, fd: FormData): 
   if (kind !== "resident" && kind !== "external") return { error: "Informe se é morador ou externo." };
   if (!whatsapp) return { error: "WhatsApp inválido. Use o formato (11) 99999-8888." };
   if (description.length > 500) return { error: "A descrição deve ter até 500 caracteres." };
-  if (photo_url && !photo_url.includes("/provider-photos/")) return { error: "Foto inválida." };
+  if (photo_url && !isStorageImageUrl(photo_url, "provider-photos")) return { error: "Foto inválida." };
   const ig = normalizeInstagram(str(fd, "instagram"));
   if (!ig.ok) return { error: "Instagram inválido. Use o @ do perfil ou o link, ex.: @nomedaloja." };
   const site = normalizeWebsite(str(fd, "website"));
@@ -191,6 +193,7 @@ export async function submitReview(slug: string, providerId: string, _: FormStat
     .insert({ condo_id: target?.condo_id ?? condo.id, provider_id: providerId, author_id: user.id, rating, comment, author_label: "" });
   if (error) {
     if (error.code === "23505") return { error: "Você já avaliou este prestador." };
+    if (error.message?.includes("self_review")) return { error: "Você não pode avaliar o próprio perfil." };
     return { error: "Não foi possível enviar sua avaliação." };
   }
   revalidatePath(`/c/${slug}`, "layout");
@@ -226,7 +229,7 @@ export async function reportItem(slug: string, _: FormState, fd: FormData): Prom
 
 export async function signOut(slug: string) {
   const supabase = await createClient();
-  await supabase.auth.signOut();
+  await supabase.auth.signOut({ scope: "global" });   // encerra também as sessões abertas em outros aparelhos
   redirect(`/c/${slug}/entrar`);
 }
 
@@ -396,6 +399,7 @@ export async function updateProviderProfile(slug: string, providerId: string, _:
   const description = str(fd, "description");
   const whatsapp = normalizeWhatsapp(str(fd, "whatsapp"));
   const photo_url = str(fd, "photo_url");
+  if (photo_url && !isStorageImageUrl(photo_url, "provider-photos")) return { error: "Foto inválida." };
   if (name.length < 2 || name.length > 80) return { error: "O nome deve ter de 2 a 80 caracteres." };
   if (!whatsapp) return { error: "WhatsApp inválido. Use o formato (11) 99999-8888." };
   if (description.length > 500) return { error: "A descrição deve ter até 500 caracteres." };
@@ -541,6 +545,7 @@ export async function addGalleryPhoto(slug: string, providerId: string, _: FormS
   const { supabase } = await requireMember(slug);
   const url = str(fd, "gallery_url");
   if (!UUID.test(providerId) || !url) return { error: "Escolha uma foto." };
+  if (!isStorageImageUrl(url, "provider-photos")) return { error: "Foto inválida." };
   const { error } = await supabase.rpc("add_provider_photo", { p_provider: providerId, p_url: url, p_caption: str(fd, "caption").slice(0, 80) || null });
   if (error) {
     if (error.message?.includes("max_photos")) return { error: "A galeria já tem 6 fotos. Remova uma para adicionar outra." };
@@ -554,7 +559,11 @@ export async function addGalleryPhoto(slug: string, providerId: string, _: FormS
 export async function removeGalleryPhoto(slug: string, photoId: string) {
   const { supabase } = await requireMember(slug);
   if (!UUID.test(photoId)) return;
-  await supabase.rpc("remove_provider_photo", { p_photo: photoId });
+  const { data: photo } = await supabase.from("provider_photos").select("url").eq("id", photoId).maybeSingle();
+  const { error } = await supabase.rpc("remove_provider_photo", { p_photo: photoId });
+  // Apaga também o arquivo (antes só a linha saía e a foto continuava acessível pelo endereço).
+  const path = !error && photo?.url ? storagePathFromUrl(photo.url, "provider-photos") : null;
+  if (path) await createAdminClient()?.storage.from("provider-photos").remove([path]);
   revalidatePath(`/c/${slug}`, "layout");
 }
 
@@ -599,7 +608,7 @@ export async function adminSaveAd(slug: string, adId: string | null, _: FormStat
   const wa = rawWa ? normalizeWhatsapp(rawWa) : null;
   if (rawWa && !wa) return { error: "WhatsApp inválido. Use o formato (11) 99999-8888." };
   if (!link.value && !wa) return { error: "Informe um link ou um WhatsApp para o botão do anúncio." };
-  if (image_url && !image_url.includes("/ad-images/")) return { error: "Imagem inválida." };
+  if (image_url && !isStorageImageUrl(image_url, "ad-images")) return { error: "Imagem inválida." };
   if ((starts_on && !DATE.test(starts_on)) || (ends_on && !DATE.test(ends_on))) return { error: "Datas inválidas." };
   if (starts_on && ends_on && ends_on < starts_on) return { error: "A data final deve ser depois da inicial." };
   const placements = fd.getAll("placement").map(String).filter((p): p is "home" | "category" | "search" => p === "home" || p === "category" || p === "search");

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getFeatures, getRegionInfo, getScope, requireMember } from "@/lib/condo";
+import { getFeatures, getRegionInfo, getScope, isPlatformAdmin, requireMember } from "@/lib/condo";
 import { formatWhatsapp } from "@/lib/phone";
 import { instagramUrl, websiteLabel } from "@/lib/links";
 import { reviewAuthorLabel } from "@/lib/regions";
@@ -289,7 +289,7 @@ export default async function Prestador({
         {(isOwner || isSelfRegistrant) && (
           <a href={shareHref} target="_blank" rel="noopener noreferrer" className="btn-secondary !px-4 !py-2 !text-sm">📲 Compartilhar meu perfil no WhatsApp</a>
         )}
-        {flags.plans && (isOwner || isAdmin) && <PlanCard slug={slug} provider={{ id: p.id, name: p.name }} plan={plan} isOwner={isOwner} isAdmin={isAdmin} />}
+        {flags.plans && (isOwner || isAdmin) && <PlanCard slug={slug} provider={{ id: p.id, name: p.name }} plan={plan} isOwner={isOwner} isAdmin={isAdmin} canManage={isAdmin && (await isPlatformAdmin())} />}
         {canShowcase && canEdit && (
           <details className="rounded-2xl border border-navy/10 p-3">
             <summary className="cursor-pointer text-sm font-bold text-sky-brand">🛍️ Editar vitrine (serviços, preços, horários e fotos)</summary>
